@@ -494,3 +494,35 @@ dialog input {
 @media (prefers-reduced-motion: reduce) {
   .clock-colon { animation: none; }
 }
+
+/* ---------- Plan de ligne (PDF officiel) sous les écrans ---------- */
+.line-plan { margin: 0 10px 28px; }
+.plan-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.plan-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--app-muted);
+}
+.plan-toggle {
+  padding: 5px 12px;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  background: #151515;
+  color: var(--app-text);
+  font-size: 14px;
+}
+.plan-strip {
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-radius: 10px;
+  background: #ffffff;
+  -webkit-overflow-scrolling: touch;
+}
+.plan-canvas { display: block; }
+.plan-status { margin: 0; padding: 60px 16px; color: #555; font-size: 15px; text-align: center; }
+.plan-credit { margin: 6px 2px 0; color: #777; font-size: 12px; }
+.plan-credit a { text-decoration: underline; }
+body:has(.board-page) { background: #050505; }

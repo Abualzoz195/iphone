@@ -4,6 +4,7 @@ import { NETWORK } from "./network.js";
 import { DEFAULT_FAVORITES, DEFAULT_MESSAGE, SETTINGS } from "./config.js";
 import { fetchDepartures, fetchMessages, PrimError } from "./prim.js";
 import { rerScreen, metroScreen, lineBadge, escapeHtml } from "./screens.js";
+import { mountLinePlan } from "./lineplan.js";
 
 const app = document.getElementById("app");
 
@@ -275,6 +276,7 @@ function boardPage(lineId, stationId) {
     })}
     <p class="notice" id="board-error" hidden></p>
     <div class="screens" id="screens"></div>
+    <section class="line-plan" id="line-plan" hidden></section>
   </div>`;
   document.title = `${station.name} — ${line.mode === "RER" ? "RER" : "Métro"} ${line.code}`;
 
@@ -283,6 +285,7 @@ function boardPage(lineId, stationId) {
     e.currentTarget.textContent = star();
   });
 
+  mountLinePlan(document.getElementById("line-plan"), line);
   startBoard();
 }
 
