@@ -407,6 +407,46 @@ function metroRows(container, groups, maxGroups, compact) {
   body.addSpacer();
 }
 
+// Écran métro / bus en colonnes (moyen, grand) : une colonne par sens,
+// « 1er » et « 2e » côte à côte comme sur l'écran de quai
+function metroColumns(container, groups) {
+  const width = Math.floor((Device.screenSize().width - 52) / 2) - 1; // largeur d'un widget moyen
+  const body = container.addStack();
+  body.backgroundColor = COLORS.metroBody;
+  body.setPadding(18, 0, 12, 0); // contenu plus centré dans la hauteur du widget
+  body.topAlignContent();
+  groups.slice(0, 2).forEach((deps, i) => {
+    if (i) {
+      const line = body.addStack(); // trait entre les deux sens
+      line.backgroundColor = new Color("#3a3d4d");
+      line.size = new Size(1, 0);
+    }
+    const next = deps.filter((d) => !d.cancelled);
+    const col = body.addStack();
+    col.layoutVertically();
+    col.size = new Size(width, 0);
+    col.setPadding(0, 10, 0, 8);
+    const dest = label(col, `→ ${next[0] ? next[0].destination : deps[0].destination}`, 11, COLORS.metroText, "semibold");
+    dest.minimumScaleFactor = 0.7;
+    col.addSpacer(4);
+    const cells = col.addStack();
+    ["1er", "2e"].forEach((name, k) => {
+      if (k) {
+        cells.addSpacer(6);
+        const sep = cells.addStack(); // trait vertical entre 1er et 2e, comme sur l'écran
+        sep.backgroundColor = new Color("#93a4ff");
+        sep.size = new Size(1, 34);
+        cells.addSpacer(6);
+      }
+      const cell = cells.addStack();
+      cell.layoutVertically();
+      label(cell, name, 9, new Color("#93a4ff"), "semibold");
+      label(cell, next[k] ? hhmm(next[k].expected) : "--:--", 20, COLORS.wait, "mono");
+    });
+    cells.addSpacer();
+  });
+}
+
 function noTrain(container, message, metro) {
   const box = container.addStack();
   box.backgroundColor = metro ? COLORS.metroBody : COLORS.row;
@@ -429,7 +469,8 @@ function station(widget, fav, groups, layout, rows, compact) {
     if (layout === "columns" && directions.length === 2) directionColumns(block, directions, rows);
     else directionStack(block, directions, rows, compact);
   } else {
-    metroRows(block, groups, 2, compact);
+    if (compact) metroRows(block, groups, 2, true);
+    else metroColumns(block, groups);
   }
 }
 
