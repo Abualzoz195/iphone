@@ -8,7 +8,7 @@
 // - API PRIM : jamais mise en cache (horaires toujours en direct).
 //
 // Pour forcer un nettoyage complet des caches, change le numéro de CACHE_VERSION.
-const CACHE_VERSION = 3; // 3 : page Widget
+const CACHE_VERSION = 4; // 4 : script du widget toujours pris en direct
 const APP_CACHE = `app-${CACHE_VERSION}`;
 const PLANS_CACHE = `plans-${CACHE_VERSION}`;
 const LIB_CACHE = `lib-${CACHE_VERSION}`;
@@ -73,6 +73,8 @@ self.addEventListener("fetch", (event) => {
   if (url.hostname === "assets-bff.bonjour-ratp.fr") return event.respondWith(planFirst(request));
   if (url.origin !== self.location.origin) return;
   if (url.pathname.includes("/vendor/")) return event.respondWith(cacheFirst(request, LIB_CACHE));
+  // Script du widget : toujours la dernière version (on l'installe pour le copier dans Scriptable)
+  if (url.pathname.includes("/scriptable/")) return event.respondWith(networkFirst(request));
   event.respondWith(staleWhileRevalidate(request, event));
 });
 
@@ -93,6 +95,20 @@ async function planFirst(request) {
     return response;
   } catch (err) {
     if (cached) return cached; // hors connexion : l'ancien plan plutôt que rien
+    throw err;
+  }
+}
+
+// Réseau d'abord, copie du téléphone seulement hors connexion
+async function networkFirst(request) {
+  const cache = await caches.open(APP_CACHE);
+  try {
+    const response = await fetch(request, { cache: "no-store" });
+    if (response.ok) cache.put(request, response.clone());
+    return response;
+  } catch (err) {
+    const cached = await cache.match(request, { ignoreSearch: true });
+    if (cached) return cached;
     throw err;
   }
 }

@@ -194,7 +194,7 @@ if ("serviceWorker" in navigator) {
 document.getElementById("install-widget").addEventListener("click", async () => {
   const status = document.getElementById("widget-status");
   try {
-    const response = await fetch("scriptable/ProchainsTrains.js", { cache: "no-cache" });
+    const response = await fetch("scriptable/ProchainsTrains.js", { cache: "no-store" });
     if (!response.ok) throw new Error(`script introuvable (${response.status})`);
     const file = new File([await response.text()], "Prochains trains.js", { type: "text/plain" }); // .js = script pour Scriptable
     await shareFile(file);
