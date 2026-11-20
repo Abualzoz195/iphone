@@ -1,8 +1,9 @@
 // Plan de ligne officiel (PDF RATP/IDFM) affiché en bande sous les écrans de quai.
 // Le PDF est dessiné dans la page avec PDF.js (vendor/pdfjs), sans ouvrir d'autre page.
 
+import { metroPlanSvg } from "./metroplan.js";
+
 const RER_PLAN_BASE = "https://assets-bff.bonjour-ratp.fr/maps/lineMaps/plan-de-ligne_";
-const METRO_PLAN_BASE = "https://www.ratp.fr/sites/default/files/lines-assets/plan-de-ligne/metro/plan-de-ligne_metro_ligne-";
 const PDFJS_DIR = "vendor/pdfjs/";
 const MAX_CANVAS_PIXELS = 16_000_000; // limite de taille des images sur iPhone
 
@@ -10,8 +11,7 @@ const MAX_CANVAS_PIXELS = 16_000_000; // limite de taille des images sur iPhone
 export function planUrl(line) {
   const id = line.ref.split(":")[3]; // « STIF:Line::C01743: » → « C01743 »
   if (line.mode === "RER") return `${RER_PLAN_BASE}RER_SNCF_ligne-${line.code}_LIG:IDFM:${id}.pdf`;
-  if (line.mode === "METRO") return `${METRO_PLAN_BASE}${line.code}.pdf`; // ex. …ligne-1.pdf, …ligne-3bis.pdf
-  return null;
+  return null; // métro : ratp.fr refuse l'affichage intégré, le plan est dessiné par l'app
 }
 
 // Charge PDF.js une seule fois, au premier plan affiché.
@@ -62,8 +62,41 @@ async function draw(canvas, page, cssHeight) {
   await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
 }
 
+// Plan métro dessiné par l'app, avec la station `stationId` mise en évidence.
+function mountDrawnPlan(section, line, stationId) {
+  const plan = metroPlanSvg(line, stationId);
+  section.hidden = false;
+  section.innerHTML = `
+    <div class="plan-head">
+      <h2 class="plan-title">Plan de la ligne</h2>
+      <button type="button" class="plan-toggle" aria-expanded="false">Agrandir</button>
+    </div>
+    <div class="plan-strip">${plan.svg}</div>
+    <p class="plan-credit">Plan simplifié · touche une station pour voir ses prochains métros</p>`;
+
+  const strip = section.querySelector(".plan-strip");
+  const svg = section.querySelector(".plan-svg");
+  const toggle = section.querySelector(".plan-toggle");
+  let zoom = 1;
+
+  const apply = () => {
+    svg.style.width = `${plan.width * zoom}px`;
+    svg.style.height = `${plan.height * zoom}px`;
+    // Centre le plan sur ta station
+    strip.scrollLeft = plan.currentX * zoom - strip.clientWidth / 2;
+  };
+  toggle.addEventListener("click", () => {
+    zoom = zoom === 1 ? 1.6 : 1;
+    toggle.textContent = zoom === 1 ? "Agrandir" : "Réduire";
+    toggle.setAttribute("aria-expanded", String(zoom !== 1));
+    apply();
+  });
+  requestAnimationFrame(apply);
+}
+
 // Met en place la section « Plan de la ligne » dans `section` (vide si pas de plan connu).
-export function mountLinePlan(section, line) {
+export function mountLinePlan(section, line, stationId) {
+  if (line.mode === "METRO" && line.plan) return mountDrawnPlan(section, line, stationId);
   const url = planUrl(line);
   section.hidden = !url;
   if (!url) return;

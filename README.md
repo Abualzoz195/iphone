@@ -20,9 +20,12 @@ La clé API n'est **jamais** dans le code : chaque appareil la garde pour lui (s
 | `css/style.css` | Styles : pages de l'app, écran RER (lavande), écran métro (bleu) |
 | `js/app.js` | Navigation (accueil, lignes, gares, écran), favoris, localisation, rafraîchissement |
 | `js/screens.js` | Dessin des écrans de quai RER et métro |
+| `js/lineplan.js` | Plan de ligne sous les écrans : PDF officiel pour le RER (via PDF.js) |
+| `js/metroplan.js` | Plan de ligne métro dessiné par l'app (tronc, branches, ta station en évidence) |
+| `vendor/pdfjs/` | PDF.js 3.11.174 de Mozilla (licence Apache 2.0) pour afficher les PDF |
 | `js/prim.js` | Appels à l'API PRIM et lecture des réponses |
 | `js/config.js` | Noms raccourcis, pastilles aéroport, message par défaut, fréquences |
-| `js/network.js` | Liste des lignes et des gares (fichier **généré**, ne pas modifier) |
+| `js/network.js` | Lignes, gares et schémas des lignes de métro (fichier **généré**, ne pas modifier) |
 | `tools/build_network.py` | Régénère `js/network.js` depuis l'API |
 | `manifest.webmanifest`, `icons/` | Nom et icône quand l'app est ajoutée à l'écran d'accueil |
 | `scriptable/ProchainsTrains.js` | Widget iPhone (RER B – Châtelet - Les Halles) à copier dans l'app Scriptable |

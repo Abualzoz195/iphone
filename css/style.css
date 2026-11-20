@@ -527,6 +527,7 @@ dialog input {
 .plan-status { margin: 0; padding: 60px 16px; color: #555; font-size: 15px; text-align: center; }
 .plan-credit { margin: 6px 2px 0; color: #777; font-size: 12px; }
 .plan-credit a { text-decoration: underline; }
+html:has(.board-page),
 body:has(.board-page) { background: #050505; }
 .plan-open {
   display: inline-block;
@@ -537,3 +538,5 @@ body:has(.board-page) { background: #050505; }
   color: #0b1033;
   font-weight: 700;
 }
+.plan-svg { display: block; }
+.plan-svg a { cursor: pointer; }

@@ -26,6 +26,49 @@ def sort_key(line):
     return (int(digits) if digits else 0, code)
 
 
+def metro_plan(line_navitia_id):
+    """Schéma de ligne : un tronc (liste de gares dans l'ordre) + des branches.
+
+    Chaque branche = gares hors du tronc, accrochées au tronc par `from` (index de la gare
+    du tronc juste avant) et/ou `to` (juste après). Une branche avec les deux est une boucle
+    ou un détour (ligne 10, 7bis) ; avec un seul, c'est une fourche (lignes 7, 13).
+    """
+    routes = get(f"/lines/{line_navitia_id}/routes?count=100&depth=0")["routes"]
+    sequences = set()
+    for route in routes:
+        journeys = get(f"/routes/{route['id']}/vehicle_journeys?count=10&depth=2").get("vehicle_journeys", [])
+        for journey in journeys:
+            ids = tuple(st["stop_point"]["stop_area"]["id"].split(":")[-1] for st in journey["stop_times"])
+            if len(ids) >= 2:
+                sequences.add(ids)
+    if not sequences:
+        return None
+
+    ordered = sorted(sequences, key=len, reverse=True)
+    trunk = list(ordered[0])
+    position = {sid: i for i, sid in enumerate(trunk)}
+    branches = []
+    known = set(trunk)
+
+    for seq in ordered[1:]:
+        # Met le trajet dans le même sens que le tronc
+        shared = [position[s] for s in seq if s in position]
+        if len(shared) >= 2 and shared[0] > shared[-1]:
+            seq = seq[::-1]
+        run, before = [], None
+        for sid in list(seq) + [None]:
+            if sid is not None and sid not in position:
+                run.append(sid)
+                continue
+            if run:
+                if not set(run) <= known:  # branche pas encore connue
+                    branches.append({"ids": run, "from": before, "to": position.get(sid) if sid else None})
+                    known.update(run)
+                run = []
+            before = position.get(sid) if sid else None
+    return {"trunk": trunk, "branches": branches}
+
+
 def main():
     lines = []
     for mode, navitia_mode in MODES.items():
@@ -56,6 +99,8 @@ def main():
                     "stations": stations,
                 }
             )
+            if mode == "METRO":
+                lines[-1]["plan"] = metro_plan(line["id"])
             print(f"{mode} {line['code']}: {len(stations)} gares")
 
     OUTPUT.write_text(

@@ -315,7 +315,7 @@ function boardPage(lineId, stationId) {
     e.currentTarget.textContent = star();
   });
 
-  mountLinePlan(document.getElementById("line-plan"), line);
+  mountLinePlan(document.getElementById("line-plan"), line, station.id);
   startBoard();
 }
 
