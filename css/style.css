@@ -773,3 +773,53 @@ body:has(.board-page) { background: #050505; }
 .trip-bar i { display: block; height: 100%; border-radius: 3px; background: var(--accent); transition: width 1s linear; }
 .trip-times { display: flex; justify-content: space-between; margin-top: 6px; color: var(--app-muted); font-size: 0.82rem; font-variant-numeric: tabular-nums; }
 .trip-meta { margin: 8px 0 0; color: var(--app-muted); font-size: 0.82rem; }
+
+/* Fenêtre : gares desservies avec heure prévue */
+.trip-hint { margin: 0 0 4px; color: var(--app-muted); font-size: 0.82rem; }
+.trip-station { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.trip-station small { color: var(--app-muted); font-variant-numeric: tabular-nums; }
+.trip-result small { color: var(--app-muted); }
+
+/* Carte « Mon trajet » : position du train et deux prochaines gares */
+.trip-live { margin-top: 14px; padding-top: 12px; border-top: 0.5px solid var(--app-line); }
+.trip-now { display: flex; align-items: center; gap: 10px; margin: 0; font-size: 0.94rem; line-height: 1.35; }
+.trip-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 0 rgba(10, 132, 255, 0.6);
+  animation: trip-pulse 1.6s ease-out infinite;
+}
+.trip-dot.is-stopped { background: var(--wait-ink); animation: none; }
+@keyframes trip-pulse { to { box-shadow: 0 0 0 9px rgba(10, 132, 255, 0); } }
+.trip-next { margin: 10px 0 0; padding: 0 0 0 4px; list-style: none; }
+.trip-next li {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 0 7px 18px;
+  border-left: 2px solid var(--app-line);
+}
+.trip-next li::before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin-top: -5px;
+  border: 1.5px solid var(--app-muted);
+  border-radius: 50%;
+  background: var(--app-panel);
+}
+.trip-next li.is-destination::before { border-color: var(--wait-ink); background: var(--wait-ink); }
+.trip-next-name { font-size: 0.94rem; font-weight: 500; }
+.trip-next-name small { margin-left: 4px; color: var(--app-muted); font-size: 0.72rem; font-weight: 400; }
+.trip-next-time { display: flex; flex-direction: column; align-items: flex-end; font-variant-numeric: tabular-nums; }
+.trip-next-time b { color: var(--wait-ink); font-size: 0.94rem; }
+.trip-next-time small { color: var(--app-muted); font-size: 0.72rem; }
+@media (prefers-reduced-motion: reduce) { .trip-dot { animation: none; } }

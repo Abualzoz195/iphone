@@ -32,6 +32,31 @@ async function primGet(path, params, apiKey) {
 // SIRI met les textes dans des tableaux [{ value: "..." }].
 const text = (field) => (Array.isArray(field) ? field[0]?.value : field?.value) ?? "";
 
+// Liste ordonnée des arrêts d'un train RER précis (horaires prévus, en heure UTC « HHMMSS »).
+// L'identifiant temps réel (…VehicleJourney::<uuid>:LOC) et celui de Navitia partagent le même uuid.
+// Renvoie null si le train est introuvable.
+export async function fetchTrainStops(trainId, apiKey) {
+  const uuid = trainId?.match(/VehicleJourney::([0-9a-f-]{36})/i)?.[1];
+  if (!uuid) return null;
+  let data;
+  try {
+    data = await primGet(`/v2/navitia/vehicle_journeys/vehicle_journey:IDFM:TN:SNCF:${uuid}`, { depth: 2 }, apiKey);
+  } catch (err) {
+    if (err instanceof PrimError && err.kind === "http") return null; // train inconnu de Navitia
+    throw err;
+  }
+  const journey = data?.vehicle_journeys?.[0];
+  if (!journey) return null;
+  return journey.stop_times.map((st) => ({
+    id: st.stop_point.stop_area.id.split(":").pop(),
+    name: st.stop_point.stop_area.name ?? st.stop_point.name,
+    arrivalUtc: st.utc_arrival_time,
+    departureUtc: st.utc_departure_time,
+    // Gare traversée sans arrêt (mission directe)
+    skipped: Boolean(st.skipped_stop) || (!st.pickup_allowed && !st.drop_off_allowed),
+  }));
+}
+
 // Prochains passages d'une ligne à un arrêt.
 export async function fetchDepartures(monitoringRef, lineRef, apiKey) {
   const data = await primGet("/stop-monitoring", { MonitoringRef: monitoringRef, LineRef: lineRef }, apiKey);
