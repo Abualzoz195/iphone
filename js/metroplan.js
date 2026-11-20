@@ -1,7 +1,7 @@
 // Plan de ligne métro dessiné par l'app (SVG), à partir du schéma généré dans network.js :
 // un tronc horizontal, des branches en dessous, ta station mise en évidence.
 // Chaque station est un lien vers son écran de quai.
-import { escapeHtml } from "./screens.js?v=20261120-1533";
+import { escapeHtml } from "./screens.js?v=20261120-1548";
 
 const STEP = 46; // écart horizontal entre deux stations
 const ROW_GAP = 70; // écart vertical entre le tronc et une branche

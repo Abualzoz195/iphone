@@ -111,5 +111,56 @@ def main():
     print(f"→ {OUTPUT}")
 
 
+BUS_OUTPUT = pathlib.Path(__file__).resolve().parent.parent / "js" / "buslines.js"
+
+
+def build_bus_lines():
+    """Liste des lignes de bus (sans les arrêts, téléchargés à la demande par l'app)."""
+    lines, page = [], 0
+    while True:
+        data = get(f"/commercial_modes/commercial_mode:Bus/lines?count=1000&start_page={page}&depth=1")
+        lines += data["lines"]
+        pagination = data["pagination"]
+        if (page + 1) * pagination["items_per_page"] >= pagination["total_result"]:
+            break
+        page += 1
+    out = []
+    for line in lines:
+        line_id = line["id"].split(":")[-1]
+        out.append({
+            "id": f"BUS_{line_id}",
+            "mode": "BUS",
+            "code": line["code"],
+            "network": line.get("network", {}).get("name", ""),
+            "ref": f"STIF:Line::{line_id}:",
+            "navitiaId": line["id"],
+            "color": "#" + (line.get("color") or "666666"),
+            "textColor": "#" + (line.get("text_color") or "FFFFFF"),
+        })
+    # Tri : numéros dans l'ordre (20, 21, 197…), puis lettres (N1, TVM…)
+    def key(l):
+        digits = "".join(c for c in l["code"] if c.isdigit())
+        return (0 if l["code"][:1].isdigit() else 1, int(digits) if digits else 0, l["code"], l["network"])
+    out.sort(key=key)
+    # Format compact : [identifiant IDFM, numéro, réseau (index), couleur, couleur du texte]
+    networks = sorted({l["network"] for l in out})
+    rows = [
+        [l["ref"].split(":")[3], l["code"], networks.index(l["network"]), l["color"][1:], l["textColor"][1:]]
+        for l in out
+    ]
+    BUS_OUTPUT.write_text(
+        "// Fichier généré par tools/build_network.py — ne pas modifier à la main.\n"
+        "// Lignes de bus d'Île-de-France ; les arrêts sont téléchargés à la demande (js/bus.js).\n"
+        "// Chaque ligne : [identifiant IDFM, numéro, index du réseau dans NETWORKS, couleur, couleur du texte]\n"
+        "export const NETWORKS = " + json.dumps(networks, ensure_ascii=False, separators=(",", ":")) + ";\n"
+        "export const BUS_ROWS = " + json.dumps(rows, ensure_ascii=False, separators=(",", ":")) + ";\n",
+        encoding="utf-8",
+    )
+    print(f"BUS : {len(out)} lignes → {BUS_OUTPUT}")
+
+
 if __name__ == "__main__":
-    main()
+    import sys
+    if "--bus-only" not in sys.argv:
+        main()
+    build_bus_lines()

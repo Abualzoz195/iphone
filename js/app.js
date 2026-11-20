@@ -1,11 +1,12 @@
 // Navigation de l'app : accueil (favoris) → ligne → gare → écran de quai.
 // Les pages sont repérées par l'adresse après « # » (ex. #/board/RER_B/474151).
-import { NETWORK } from "./network.js?v=20261120-1533";
-import { DEFAULT_FAVORITES, DEFAULT_MESSAGE, SETTINGS } from "./config.js?v=20261120-1533";
-import { fetchDepartures, fetchMessages, PrimError, usageStats, DAILY_QUOTA } from "./prim.js?v=20261120-1533";
-import { rerScreen, metroScreen, lineBadge, escapeHtml, destinationHtml } from "./screens.js?v=20261120-1533";
-import { mountLinePlan } from "./lineplan.js?v=20261120-1533";
-import { openTripDialog, tripCardHtml, loadTrip, endTrip } from "./trip.js?v=20261120-1533";
+import { NETWORK } from "./network.js?v=20261120-1548";
+import { DEFAULT_FAVORITES, DEFAULT_MESSAGE, SETTINGS } from "./config.js?v=20261120-1548";
+import { fetchDepartures, fetchMessages, PrimError, usageStats, DAILY_QUOTA } from "./prim.js?v=20261120-1548";
+import { rerScreen, metroScreen, lineBadge, escapeHtml, destinationHtml } from "./screens.js?v=20261120-1548";
+import { mountLinePlan } from "./lineplan.js?v=20261120-1548";
+import { openTripDialog, tripCardHtml, loadTrip, endTrip } from "./trip.js?v=20261120-1548";
+import { BUS_LINES, ensureBusStops, hasBusStops, nearbyBusStops } from "./bus.js?v=20261120-1548";
 
 const app = document.getElementById("app");
 
@@ -34,7 +35,8 @@ function apiKey() {
   }
 }
 
-const lineById = (id) => NETWORK.find((l) => l.id === id);
+const ALL_LINES = new Map([...NETWORK, ...BUS_LINES].map((l) => [l.id, l]));
+const lineById = (id) => ALL_LINES.get(id);
 const stationOf = (line, stationId) => line?.stations.find((s) => s.id === stationId);
 
 // ---------- Favoris ----------
@@ -149,6 +151,14 @@ function toggleFavoritePreview(key) {
 }
 
 function homePage() {
+  const missingBus = favorites()
+    .map((f) => lineById(f.lineId))
+    .filter((line) => line?.mode === "BUS" && !hasBusStops(line));
+  if (missingBus.length && apiKey()) {
+    Promise.all(missingBus.map((line) => ensureBusStops(line, apiKey()).catch(() => {}))).then(() => {
+      if (!location.hash || location.hash === "#/" || location.hash === "#") homePage();
+    });
+  }
   const cards = favorites()
     .map((f) => {
       const line = lineById(f.lineId);
@@ -229,7 +239,7 @@ const previews = new Map(); // "ligne/gare" → { departures, error }
 function previewRow(line, deps, now) {
   const next = deps.filter((d) => !d.cancelled);
   const first = deps[0];
-  if (line.mode === "METRO") {
+  if (line.mode !== "RER") { // métro et bus : « 1er | 2e »
     const minutes = (d) => (d ? (d.atStop ? 0 : Math.max(0, Math.floor((d.expected - now) / 60000))) : "--");
     return `<div class="pv-row pv-metro">
       <span class="pv-dest">${destinationHtml(next[0]?.destination ?? first.destination)}</span>
@@ -314,17 +324,53 @@ function linesPage() {
     <div class="line-grid">${grid("RER")}</div>
     <h2 class="group-label">Métro</h2>
     <div class="line-grid">${grid("METRO")}</div>
+    <h2 class="group-label">Bus</h2>
+    <div class="search-row bus-search">
+      <input class="search" id="bus-search" type="search" inputmode="search" placeholder="Numéro de ligne (ex. 197)" autocomplete="off">
+    </div>
+    <div class="group" id="bus-list"><p class="empty">Tape le numéro d'une ligne parmi les ${BUS_LINES.length} lignes de bus.</p></div>
   </div>`;
+
+  const input = document.getElementById("bus-search");
+  const list = document.getElementById("bus-list");
+  input.addEventListener("input", () => {
+    const q = normalize(input.value.trim());
+    if (!q) {
+      list.innerHTML = `<p class="empty">Tape le numéro d'une ligne parmi les ${BUS_LINES.length} lignes de bus.</p>`;
+      return;
+    }
+    // Numéro exact d'abord, puis numéros qui commencent par la saisie, puis réseaux
+    const score = (l) => (normalize(l.code) === q ? 0 : normalize(l.code).startsWith(q) ? 1 : 2);
+    const found = BUS_LINES.filter((l) => normalize(l.code).startsWith(q) || normalize(l.network).includes(q))
+      .sort((a, b) => score(a) - score(b))
+      .slice(0, 40);
+    list.innerHTML =
+      found
+        .map((l) => `<a class="list-item" href="#/line/${l.id}">${lineBadge(l)}<span class="list-item-name"><span class="bus-network">${escapeHtml(l.network)}</span></span><span class="chevron">›</span></a>`)
+        .join("") || `<p class="empty">Aucune ligne trouvée.</p>`;
+  });
 }
 
 function linePage(lineId) {
   const line = lineById(lineId);
   if (!line) return (location.hash = "#/lines");
+  if (line.mode === "BUS" && !hasBusStops(line)) {
+    app.innerHTML = `<div class="page">
+      ${navbar(lineBadge(line), { back: "#/lines", backLabel: "Lignes" })}
+      <p class="empty" style="margin-top:34px">${apiKey() ? "Chargement des arrêts…" : "Ajoute ta clé API PRIM dans Réglages."}</p>
+    </div>`;
+    if (apiKey()) {
+      ensureBusStops(line, apiKey())
+        .then(() => location.hash === `#/line/${lineId}` && linePage(lineId))
+        .catch((err) => { app.querySelector(".empty").textContent = errorText(err); });
+    }
+    return;
+  }
 
   app.innerHTML = `<div class="page">
     ${navbar(lineBadge(line), { back: "#/lines", backLabel: "Lignes", right: `<button class="glass-btn round" id="near" aria-label="Trier par distance">${ICONS.locate}</button>` })}
     <div class="search-row" style="margin-top:12px">
-      <input class="search" id="search" type="search" placeholder="Rechercher une gare" autocomplete="off">
+      <input class="search" id="search" type="search" placeholder="${line.mode === "BUS" ? "Rechercher un arrêt" : "Rechercher une gare"}" autocomplete="off">
     </div>
     <p class="notice" id="geo-error" hidden></p>
     <div class="group" id="station-list"></div>
@@ -368,8 +414,15 @@ async function nearbyPage() {
     const position = await locate();
     const all = NETWORK.flatMap((line) => line.stations.map((station) => ({ line, station, km: distanceKm(position, station) })));
     all.sort((a, b) => a.km - b.km);
-    list.innerHTML = all
-      .slice(0, 15)
+    let nearby = all.slice(0, 15);
+    // Bus : 1 requête Navitia (arrêts à moins de 600 m)
+    if (apiKey()) {
+      try {
+        const buses = await nearbyBusStops(position, apiKey());
+        nearby = [...nearby, ...buses].sort((a, b) => a.km - b.km).slice(0, 40);
+      } catch { /* sans réseau : RER et métro seulement */ }
+    }
+    list.innerHTML = nearby
       .map(({ line, station, km }) => stationLink(line, station, `<span class="distance">${formatDistance(km)}</span>`))
       .join("");
   } catch (err) {
@@ -479,7 +532,7 @@ function drawBoard() {
   const groups = platformGroups(line, board.station, board.departures, now);
   if (!groups.length) groups.push([]); // avant le premier chargement : un écran « Chargement… »
 
-  const render = line.mode === "METRO" ? metroScreen : rerScreen;
+  const render = line.mode === "RER" ? rerScreen : metroScreen; // le bus reprend l'écran métro
   const message = currentMessage(now);
   const html = groups.map((departures) => render({ line, departures, message, now, loading: !board.loaded })).join("");
   updateInPlace(container, html);
@@ -491,6 +544,13 @@ function drawBoard() {
 
 function boardPage(lineId, stationId) {
   const line = lineById(lineId);
+  if (line?.mode === "BUS" && !stationOf(line, stationId) && !hasBusStops(line) && apiKey()) {
+    app.innerHTML = `<div class="board-page">${navbar(lineBadge(line), { back: "#/", backLabel: "Mes gares" })}<p class="empty" style="margin-top:34px">Chargement de l'arrêt…</p></div>`;
+    ensureBusStops(line, apiKey())
+      .then(() => location.hash === `#/board/${lineId}/${stationId}` && boardPage(lineId, stationId))
+      .catch((err) => { app.querySelector(".empty").textContent = errorText(err); });
+    return;
+  }
   const station = stationOf(line, stationId);
   if (!station) return (location.hash = "#/");
 
@@ -631,7 +691,9 @@ document.getElementById("import-file").addEventListener("change", async (e) => {
     const seen = new Set();
     const valid = list.filter((f) => {
       const key = `${f?.lineId}/${f?.stationId}`;
-      if (seen.has(key) || !stationOf(lineById(f?.lineId), f?.stationId)) return false;
+      const line = lineById(f?.lineId);
+      const known = stationOf(line, f?.stationId) || (line?.mode === "BUS" && /^\d+$/.test(String(f?.stationId)));
+      if (seen.has(key) || !known) return false;
       seen.add(key);
       return true;
     }).map(({ lineId, stationId }) => ({ lineId, stationId }));

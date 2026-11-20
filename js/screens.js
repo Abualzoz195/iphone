@@ -1,5 +1,5 @@
 // Rendu HTML des deux types d'écrans de quai : RER (liste de trains) et métro (1er / 2e métro).
-import { DESTINATION_ALIASES, AIRPORTS, SETTINGS } from "./config.js?v=20261120-1533";
+import { DESTINATION_ALIASES, AIRPORTS, SETTINGS } from "./config.js?v=20261120-1548";
 
 export const escapeHtml = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -18,6 +18,9 @@ export function lineBadge(line, size = "") {
   const style = `--line:${line.color};--line-text:${line.textColor}`;
   if (line.mode === "METRO") {
     return `<span class="badge badge-metro ${size}" style="${style}"><span class="badge-mode">M</span><span class="badge-line ${line.code.length > 2 ? "is-long" : ""}">${escapeHtml(line.code)}</span></span>`;
+  }
+  if (line.mode === "BUS") {
+    return `<span class="badge badge-bus ${size}" style="${style}"><span class="badge-mode">BUS</span><span class="badge-line ${line.code.length > 3 ? "is-long" : ""}">${escapeHtml(line.code)}</span></span>`;
   }
   return `<span class="badge badge-rer ${size}" style="${style}"><span class="badge-mode">RER</span><span class="badge-line">${escapeHtml(line.code)}</span></span>`;
 }
@@ -94,7 +97,8 @@ function metroCell(label, dep, now) {
 
 export function metroScreen({ line, departures, message, now, loading }) {
   const next = departures.filter((d) => !d.cancelled);
-  const destination = next[0]?.destination ?? (loading ? "Chargement…" : "Aucun métro annoncé");
+  const vehicle = line.mode === "BUS" ? "bus" : "métro"; // l'écran métro sert aussi pour les bus
+  const destination = next[0]?.destination ?? (loading ? "Chargement…" : `Aucun ${vehicle} annoncé`);
 
   return `<section class="screen metro-screen">
     <header class="metro-head">
@@ -103,9 +107,9 @@ export function metroScreen({ line, departures, message, now, loading }) {
       ${clock(now, "is-metro")}
     </header>
     <div class="metro-body">
-      ${metroCell("1<sup>er</sup> métro", next[0], now)}
+      ${metroCell(`1<sup>er</sup> ${vehicle}`, next[0], now)}
       <span class="metro-sep" aria-hidden="true"></span>
-      ${metroCell("2<sup>e</sup> métro", next[1], now)}
+      ${metroCell(`2<sup>e</sup> ${vehicle}`, next[1], now)}
     </div>
     ${infoBar(message, line, "is-metro")}
   </section>`;

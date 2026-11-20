@@ -399,6 +399,24 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .badge-metro .badge-line.is-long { font-size: calc(var(--size) * 0.4); }
 
+/* Bus : rectangle « BUS » en contour + rectangle de la couleur de la ligne avec le numéro */
+.badge-bus .badge-mode {
+  padding: 0 calc(var(--size) * 0.12);
+  border: calc(var(--size) * 0.07) solid currentColor;
+  border-radius: calc(var(--size) * 0.12);
+  font-size: calc(var(--size) * 0.4);
+}
+.badge-bus .badge-line {
+  min-width: calc(var(--size) * 1.3);
+  padding: 0 calc(var(--size) * 0.15);
+  border-radius: calc(var(--size) * 0.12);
+  background: var(--line);
+  color: var(--line-text);
+  font-size: calc(var(--size) * 0.56);
+  white-space: nowrap;
+}
+.badge-bus .badge-line.is-long { font-size: calc(var(--size) * 0.42); }
+
 /* ---------- Écran de quai : cadre commun ---------- */
 .board-page { background: #050505; }
 .board-page .navbar { background: linear-gradient(#050505 60%, rgba(5, 5, 5, 0)); }
@@ -866,3 +884,7 @@ body:has(.board-page) { background: #050505; }
 /* Place libre sous la barre du haut pour le compteur (écran de gare, recherche) */
 .board-page .screens { padding-top: 34px; }
 .search-row { margin-top: 34px !important; }
+
+/* Recherche de lignes de bus */
+.search-row.bus-search { margin-top: 0 !important; }
+.bus-network { color: var(--app-muted); font-size: 0.88rem; }

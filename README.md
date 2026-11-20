@@ -25,6 +25,8 @@ La clé API n'est **jamais** dans le code : chaque appareil la garde pour lui (s
 | `vendor/pdfjs/` | PDF.js 3.11.174 de Mozilla (licence Apache 2.0) pour afficher les PDF |
 | `js/prim.js` | Appels à l'API PRIM et lecture des réponses |
 | `js/config.js` | Noms raccourcis, pastilles aéroport, message par défaut, fréquences |
+| `js/buslines.js` | Les 1 967 lignes de bus (fichier **généré**, format compact) |
+| `js/bus.js` | Bus : arrêts d'une ligne téléchargés à la demande et gardés sur le téléphone, arrêts proches |
 | `js/network.js` | Lignes, gares et schémas des lignes de métro (fichier **généré**, ne pas modifier) |
 | `tools/build_network.py` | Régénère `js/network.js` depuis l'API |
 | `manifest.webmanifest`, `icons/` | Nom et icône quand l'app est ajoutée à l'écran d'accueil |
@@ -59,11 +61,14 @@ restent justes ; le « dans X min » se met à jour tout seul entre deux rafraî
 
 ## Mettre à jour la liste des gares
 
-Toutes les gares RER et métro sont déjà dans `js/network.js`. À refaire seulement si une ligne
-est prolongée ou une gare ouverte :
+Toutes les gares RER et métro sont déjà dans `js/network.js`, et les lignes de bus dans
+`js/buslines.js`. À refaire seulement si une ligne est créée ou prolongée :
 ```
-PRIM_API_KEY=ta_cle python3 tools/build_network.py
+PRIM_API_KEY=ta_cle python3 tools/build_network.py            # RER, métro et bus
+PRIM_API_KEY=ta_cle python3 tools/build_network.py --bus-only # bus seulement
 ```
+Les arrêts de bus ne sont pas dans l'app : ils sont téléchargés la première fois qu'on ouvre
+une ligne (1 requête Navitia), puis gardés sur le téléphone.
 
 ## Publier une mise à jour
 

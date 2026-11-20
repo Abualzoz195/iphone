@@ -86,6 +86,11 @@ async function primGet(path, params, apiKey) {
 // SIRI met les textes dans des tableaux [{ value: "..." }].
 const text = (field) => (Array.isArray(field) ? field[0]?.value : field?.value) ?? "";
 
+// Requête Navitia générique (arrêts d'une ligne de bus, arrêts proches…). Quota Navitia séparé.
+export function fetchNavitia(path, params, apiKey) {
+  return primGet(`/v2/navitia${path}`, params, apiKey);
+}
+
 // Liste ordonnée des arrêts d'un train RER précis (horaires prévus, en heure UTC « HHMMSS »).
 // L'identifiant temps réel (…VehicleJourney::<uuid>:LOC) et celui de Navitia partagent le même uuid.
 // Renvoie null si le train est introuvable.
