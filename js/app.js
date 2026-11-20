@@ -135,10 +135,10 @@ function homePage() {
     ${!apiKey() ? `<p class="notice">Ajoute ta clé API PRIM dans <b>Réglages</b> pour voir les trains.</p>` : ""}
     <ul class="fav-list" id="fav-list">${cards || `<li class="glass empty">Aucune gare. Ajoutes-en une puis touche ☆ sur son écran.</li>`}</ul>
     ${editing ? `<p class="group-footer">Fais glisser ≡ pour changer l'ordre.</p>` : ""}
-    <nav class="toolbar" aria-label="Actions">
-      <a class="toolbar-btn" href="#/lines">${ICONS.plus}<span>Ajouter</span></a>
-      <a class="toolbar-btn" href="#/nearby">${ICONS.locate}<span>Autour de moi</span></a>
-    </nav>
+    ${editing ? "" : `<nav class="toolbar" aria-label="Actions">
+      <a class="glass-btn round" href="#/nearby" aria-label="Gares autour de moi">${ICONS.locate}</a>
+      <a class="glass-btn is-tinted" href="#/lines">Ajouter une gare</a>
+    </nav>`}
   </div>`;
 
   const list = document.getElementById("fav-list");
