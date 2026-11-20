@@ -235,6 +235,35 @@ function currentMessage(now) {
   return texts[Math.floor(now / 1000 / SETTINGS.messageRotateSeconds) % texts.length];
 }
 
+// Met à jour l'affichage sans remplacer les éléments existants : on ne change que les textes
+// et attributs différents. Sur iPhone, remplacer l'élément sous le doigt annule le défilement.
+let lastBoardHtml = "";
+function updateInPlace(container, html) {
+  if (html === lastBoardHtml && container.childNodes.length) return;
+  lastBoardHtml = html;
+  const next = document.createElement("div");
+  next.innerHTML = html;
+  morphChildren(container, next);
+}
+
+function morphChildren(current, next) {
+  const oldNodes = [...current.childNodes];
+  const newNodes = [...next.childNodes];
+  newNodes.forEach((newNode, i) => {
+    const oldNode = oldNodes[i];
+    if (!oldNode) current.appendChild(newNode);
+    else if (oldNode.nodeType !== newNode.nodeType || oldNode.nodeName !== newNode.nodeName) current.replaceChild(newNode, oldNode);
+    else if (newNode.nodeType === Node.TEXT_NODE) {
+      if (oldNode.nodeValue !== newNode.nodeValue) oldNode.nodeValue = newNode.nodeValue;
+    } else if (newNode.nodeType === Node.ELEMENT_NODE) {
+      for (const { name } of [...oldNode.attributes]) if (!newNode.hasAttribute(name)) oldNode.removeAttribute(name);
+      for (const { name, value } of [...newNode.attributes]) if (oldNode.getAttribute(name) !== value) oldNode.setAttribute(name, value);
+      morphChildren(oldNode, newNode);
+    }
+  });
+  for (let i = oldNodes.length - 1; i >= newNodes.length; i--) oldNodes[i].remove();
+}
+
 function drawBoard() {
   const container = document.getElementById("screens");
   if (!container) return;
@@ -252,9 +281,10 @@ function drawBoard() {
 
   const render = line.mode === "METRO" ? metroScreen : rerScreen;
   const message = currentMessage(now);
-  container.innerHTML = groups
+  const html = groups
     .map((group) => render({ line, departures: upcoming.filter((d) => group === null || groupOf(d) === group), message, now, loading: !board.loaded }))
     .join("");
+  updateInPlace(container, html);
 
   const notice = document.getElementById("board-error");
   notice.hidden = !board.error;
