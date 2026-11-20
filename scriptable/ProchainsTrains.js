@@ -189,6 +189,7 @@ async function fetchGroups(fav, apiKey) {
     const name = text(j.VehicleJourneyName).replace(/^RATP/, "");
     groups.get(key).push({
       mission: /^[A-Z]{4}\d{2}$/.test(name) ? name : text(j.JourneyNote),
+      direction: (j.DirectionRef || {}).value || "",
       expected,
       destination: ALIASES[destination] || destination,
       delay: Math.round((expected - aimed) / 60000),
@@ -247,7 +248,7 @@ function badges(stack, w, size) {
 function header(container, w, compact) {
   const head = container.addStack();
   head.backgroundColor = COLORS.head;
-  head.setPadding(compact ? 6 : 7, 10, compact ? 6 : 7, 10);
+  head.setPadding(compact ? 5 : 7, 10, compact ? 4 : 7, 10);
   head.centerAlignContent();
   badges(head, w, compact ? 11 : 13);
   head.addSpacer(7);
@@ -258,12 +259,81 @@ function header(container, w, compact) {
 }
 
 // Carré noir avec l'heure en jaune (ou « Supp. » en rouge)
-function waitBox(stack, d) {
+function waitBox(stack, d, size = 13) {
   const box = stack.addStack();
   box.backgroundColor = COLORS.waitBg;
   box.cornerRadius = 3;
   box.setPadding(2, 5, 2, 5);
-  label(box, d.cancelled ? "Supp." : hhmm(d.expected), 13, d.cancelled ? COLORS.red : COLORS.wait, "mono");
+  label(box, d.cancelled ? "Supp." : hhmm(d.expected), size, d.cancelled ? COLORS.red : COLORS.wait, "mono");
+}
+
+// ---------- RER : une direction par bloc ----------
+// Titre d'une direction : ses terminus (« Mitry - Claye · Aéroport CDG 2 »)
+const directionTitle = (deps) => [...new Set(deps.map((d) => d.destination))].slice(0, 2).join(" · ");
+
+// Deux directions au plus. Les trains sont groupés par voie ; si la gare a plus de deux voies,
+// on regroupe par sens (aller / retour).
+function twoDirections(groups) {
+  if (groups.length <= 2) return groups;
+  const bySense = new Map();
+  for (const d of groups.flat()) {
+    if (!bySense.has(d.direction)) bySense.set(d.direction, []);
+    bySense.get(d.direction).push(d);
+  }
+  return [...bySense.values()].map((deps) => deps.sort((a, b) => a.expected - b.expected)).slice(0, 2);
+}
+
+function directionTitleRow(container, deps, compact) {
+  const title = container.addStack();
+  title.backgroundColor = COLORS.head;
+  title.setPadding(compact ? 1 : 3, compact ? 8 : 10, compact ? 1 : 3, 6);
+  const t = label(title, `→ ${directionTitle(deps)}`, compact ? 9 : 10, COLORS.muted, "semibold");
+  t.minimumScaleFactor = 0.7;
+  title.addSpacer();
+}
+
+// Lignes d'une direction, en version étroite (colonne, petit widget) : destination et heure.
+// Pas de retard ici, faute de place (il est dans le grand widget).
+function narrowRows(container, deps, maxRows, compact) {
+  deps.slice(0, maxRows).forEach((d, i) => {
+    const row = container.addStack();
+    row.backgroundColor = i % 2 ? COLORS.rowAlt : COLORS.row;
+    row.setPadding(compact ? 2 : 3, compact ? 8 : 10, compact ? 2 : 3, 6);
+    row.centerAlignContent();
+    const dest = label(row, d.destination, compact ? 11 : 12, COLORS.ink, "semibold");
+    dest.minimumScaleFactor = 0.7;
+    row.addSpacer(4);
+    row.addSpacer();
+    waitBox(row, d, compact ? 11 : 12);
+  });
+}
+
+// Deux colonnes côte à côte (widget moyen, grand avec plusieurs gares)
+function directionColumns(container, groups, rowsPerDirection) {
+  const width = Math.floor((Device.screenSize().width - 52) / 2) - 1; // largeur d'un widget moyen
+  const columns = container.addStack();
+  columns.topAlignContent();
+  groups.forEach((deps, i) => {
+    if (i) {
+      const line = columns.addStack(); // trait vertical entre les deux directions
+      line.backgroundColor = COLORS.rowAlt;
+      line.size = new Size(1, 0);
+    }
+    const col = columns.addStack();
+    col.layoutVertically();
+    col.size = new Size(width, 0);
+    directionTitleRow(col, deps, false);
+    narrowRows(col, deps, rowsPerDirection, false);
+  });
+}
+
+// Directions l'une sous l'autre (petit widget, grand widget avec une gare)
+function directionStack(container, groups, rowsPerDirection, compact) {
+  groups.forEach((deps) => {
+    directionTitleRow(container, deps, compact);
+    if (compact) narrowRows(container, deps, rowsPerDirection, true);
+    else rerRows(container, deps, rowsPerDirection, false);
+  });
 }
 
 // Écran RER : une ligne par train (mission, destination, retard, heure)
@@ -322,18 +392,20 @@ function noTrain(container, message, metro) {
 }
 
 // Une gare : bandeau + trains. `rows` = nombre de trains (RER) ou de sens (métro, bus)
-function station(widget, fav, groups, rows, compact) {
+// Une gare : bandeau + trains, une partie par direction.
+// layout : "columns" (côte à côte) ou "stack" (l'une sous l'autre) ; rows = trains par direction
+function station(widget, fav, groups, layout, rows, compact) {
   const w = fav.widget;
   const block = widget.addStack();
   block.layoutVertically();
   header(block, w, compact);
   if (!groups.length) return noTrain(block, "Aucun passage annoncé", w.mode !== "RER");
   if (w.mode === "RER") {
-    // Comme le panneau d'un quai : tous les sens mélangés, dans l'ordre des départs
-    const all = groups.flat().sort((a, b) => a.expected - b.expected);
-    rerRows(block, all, rows, compact);
+    const directions = twoDirections(groups);
+    if (layout === "columns" && directions.length === 2) directionColumns(block, directions, rows);
+    else directionStack(block, directions, rows, compact);
   } else {
-    metroRows(block, groups, Math.min(rows, 2), compact);
+    metroRows(block, groups, 2, compact);
   }
 }
 
@@ -374,11 +446,13 @@ async function buildWidget(family, parameter, apiKey) {
   widget.refreshAfterDate = nextRefresh;
   const compact = family === "small";
   // Nombre de trains par gare selon la taille du widget et le nombre de gares
-  const rows = family === "small" ? 3 : family === "medium" ? 4 : [9, 5, 3][favs.length - 1];
+  // Disposition et nombre de trains par direction selon la taille du widget
+  const layout = family === "small" || (family === "large" && favs.length === 1) ? "stack" : "columns";
+  const rows = family === "small" ? 2 : family === "medium" ? 3 : [4, 3, 2][favs.length - 1];
   for (const [i, fav] of favs.entries()) {
     if (i) widget.addSpacer(6);
     try {
-      station(widget, fav, await fetchGroups(fav, apiKey), rows, compact);
+      station(widget, fav, await fetchGroups(fav, apiKey), layout, rows, compact);
     } catch (err) {
       const block = widget.addStack();
       block.layoutVertically();
