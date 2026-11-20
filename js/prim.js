@@ -39,6 +39,13 @@ export async function fetchDepartures(monitoringRef, lineRef, apiKey) {
   return parseVisits(visits);
 }
 
+// Nom de la mission tel qu'affiché en gare : « ERIC53 » si dispo, sinon le code « ROPE ».
+function missionLabel(journey) {
+  const note = text(journey.JourneyNote);
+  const name = text(journey.VehicleJourneyName).replace(/^RATP/, "");
+  return /^[A-Z]{4}\d{2}$/.test(name) ? name : note;
+}
+
 export function parseVisits(visits) {
   const seen = new Set();
   const departures = [];
@@ -60,7 +67,8 @@ export function parseVisits(visits) {
 
     departures.push({
       id,
-      mission: text(journey.JourneyNote) || text(journey.VehicleJourneyName).replace(/\d+$/, ""),
+      mission: missionLabel(journey),
+      missionCode: text(journey.JourneyNote),
       destination: text(journey.DestinationName) || text(call.DestinationDisplay),
       direction: journey.DirectionRef?.value ?? "",
       platform: call.DeparturePlatformName?.value ?? call.ArrivalPlatformName?.value ?? "",
@@ -75,7 +83,24 @@ export function parseVisits(visits) {
     });
   }
 
-  return departures.sort((a, b) => a.expected - b.expected);
+  departures.sort((a, b) => a.expected - b.expected);
+
+  // Sur le RER, la RATP et la SNCF annoncent parfois le même train :
+  // même sens, même destination, même code mission, à moins de 2 min d'écart → doublon.
+  const kept = [];
+  for (const dep of departures) {
+    const twin = kept.find(
+      (k) =>
+        dep.missionCode && // le métro n'a pas de code mission : jamais dédoublonné
+        k.direction === dep.direction &&
+        k.destination === dep.destination &&
+        k.missionCode === dep.missionCode &&
+        Math.abs(k.expected - dep.expected) < 120000,
+    );
+    if (!twin) kept.push(dep);
+    else if (!twin.platform && dep.platform) twin.platform = dep.platform;
+  }
+  return kept;
 }
 
 // Messages d'info trafic (travaux, perturbations) d'une ligne.

@@ -1,7 +1,8 @@
 # Prochains trains
 
-Écran des prochains départs façon panneau de gare, en temps réel, avec les données de
-l'API **PRIM** d'Île-de-France Mobilités. Première gare : **RER B – Châtelet - Les Halles**.
+Écrans de quai RER et métro reproduits sur iPhone, en temps réel, avec les données de
+l'API **PRIM** d'Île-de-France Mobilités. Toutes les gares des **RER A à E** et des **métros 1 à 14**
+(avec 3bis et 7bis), gares favorites, recherche et « gares autour de moi ».
 
 Deux façons de l'utiliser sur iPhone :
 
@@ -16,12 +17,15 @@ La clé API n'est **jamais** dans le code : chaque appareil la garde pour lui (s
 | Fichier | Rôle |
 |---|---|
 | `index.html` | Structure de la page |
-| `css/style.css` | Style « écran de gare » |
-| `js/config.js` | **Gares, lignes, sens et noms raccourcis — c'est ici qu'on ajoute des gares** |
+| `css/style.css` | Styles : pages de l'app, écran RER (lavande), écran métro (bleu) |
+| `js/app.js` | Navigation (accueil, lignes, gares, écran), favoris, localisation, rafraîchissement |
+| `js/screens.js` | Dessin des écrans de quai RER et métro |
 | `js/prim.js` | Appels à l'API PRIM et lecture des réponses |
-| `js/app.js` | Affichage, horloge, rafraîchissement, réglages |
+| `js/config.js` | Noms raccourcis, pastilles aéroport, message par défaut, fréquences |
+| `js/network.js` | Liste des lignes et des gares (fichier **généré**, ne pas modifier) |
+| `tools/build_network.py` | Régénère `js/network.js` depuis l'API |
 | `manifest.webmanifest`, `icons/` | Nom et icône quand l'app est ajoutée à l'écran d'accueil |
-| `scriptable/ProchainsTrains.js` | Widget iPhone (à copier dans l'app Scriptable) |
+| `scriptable/ProchainsTrains.js` | Widget iPhone (RER B – Châtelet - Les Halles) à copier dans l'app Scriptable |
 
 ## Publier sur GitHub Pages
 
@@ -50,17 +54,13 @@ Rendre ce dépôt public ne pose pas de problème de sécurité : la clé API n'
 iOS choisit lui-même quand rafraîchir les widgets (souvent toutes les 5 à 15 min). Les heures de départ
 restent justes ; le « dans X min » se met à jour tout seul entre deux rafraîchissements. Toucher le widget relance le script.
 
-## Ajouter une gare ou une ligne
+## Mettre à jour la liste des gares
 
-1. Trouve l'identifiant de la gare (remplace `TA_CLE` et le nom) :
-   ```
-   curl -H "apikey: TA_CLE" "https://prim.iledefrance-mobilites.fr/marketplace/v2/navitia/places?q=chatelet&type%5B%5D=stop_area"
-   ```
-   Dans la réponse, `"id": "stop_area:IDFM:474151"` donne `STIF:StopArea:SP:474151:`.
-2. L'identifiant de la ligne est dans la même réponse (`"id": "line:IDFM:C01743"` → `STIF:Line::C01743:`).
-3. Ajoute la gare dans `STATIONS` de `js/config.js` (et la ligne dans `LINES` si elle n'y est pas).
-   Dès qu'il y a plusieurs gares, toucher le nom de la gare en haut de l'écran permet d'en changer.
-4. Pour connaître les sens d'une nouvelle ligne : l'API renvoie `DirectionRef` = `Aller` ou `Retour`, à étiqueter dans `directions`.
+Toutes les gares RER et métro sont déjà dans `js/network.js`. À refaire seulement si une ligne
+est prolongée ou une gare ouverte :
+```
+PRIM_API_KEY=ta_cle python3 tools/build_network.py
+```
 
 ## Tester sur ordinateur
 

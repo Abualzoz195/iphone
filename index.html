@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Prochains trains</title>
-  <meta name="theme-color" content="#08123d">
+  <meta name="theme-color" content="#0b1033">
   <!-- Pour l'installation sur l'écran d'accueil de l'iPhone -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
@@ -15,54 +15,21 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <div class="board">
-    <header class="board-header">
-      <button class="station" id="station-button" type="button" aria-label="Changer de gare">
-        <span class="station-name" id="station-name">…</span>
-        <span class="station-caret" id="station-caret" hidden>▾</span>
-      </button>
-      <div class="clock" id="clock" aria-label="Heure">--:--</div>
-    </header>
-
-    <main id="directions" class="directions" aria-live="polite"></main>
-
-    <div class="notice" id="notice" hidden></div>
-
-    <footer class="board-footer">
-      <div class="ticker" id="ticker" hidden>
-        <span class="ticker-label">Info trafic</span>
-        <div class="ticker-window"><div class="ticker-text" id="ticker-text"></div></div>
-      </div>
-      <div class="status-bar">
-        <span id="updated">—</span>
-        <button class="settings-button" id="settings-button" type="button">Réglages</button>
-      </div>
-    </footer>
-  </div>
+  <div id="app" class="app"></div>
 
   <dialog id="settings-dialog">
-    <form method="dialog" id="settings-form">
+    <form method="dialog">
       <h2>Réglages</h2>
       <label for="api-key">Clé API PRIM</label>
-      <input id="api-key" name="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="Colle ta clé ici">
+      <input id="api-key" type="password" autocomplete="off" spellcheck="false" placeholder="Colle ta clé ici">
       <p class="hint">La clé reste enregistrée sur cet appareil uniquement. Tu la trouves sur prim.iledefrance-mobilites.fr, dans « Mes jetons d'authentification ».</p>
       <div class="dialog-actions">
         <button value="cancel" type="submit" class="secondary">Annuler</button>
-        <button value="save" type="submit" id="save-key">Enregistrer</button>
-      </div>
-    </form>
-  </dialog>
-
-  <dialog id="station-dialog">
-    <form method="dialog">
-      <h2>Choisir une gare</h2>
-      <div id="station-list" class="station-list"></div>
-      <div class="dialog-actions">
-        <button value="cancel" type="submit" class="secondary">Fermer</button>
+        <button value="save" type="submit">Enregistrer</button>
       </div>
     </form>
   </dialog>
