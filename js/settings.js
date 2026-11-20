@@ -25,6 +25,20 @@ dialog.addEventListener("close", () => {
 // ---------- Export / import des favoris ----------
 const favsStatus = (text) => (document.getElementById("favs-status").textContent = text);
 
+// Sur iPhone : feuille de partage (Enregistrer dans Fichiers, AirDrop…) ; ailleurs : téléchargement.
+// Uniquement le fichier : un titre ou un texte deviendrait un fichier .txt séparé sur iPhone.
+async function shareFile(file) {
+  if (navigator.canShare?.({ files: [file] })) {
+    await navigator.share({ files: [file] });
+    return;
+  }
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(file);
+  link.download = file.name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+}
+
 document.getElementById("export-favs").addEventListener("click", async () => {
   // Pour les bus, on joint l'arrêt (nom, position) : sur un autre téléphone, un arrêt trouvé via
   // « Autour de moi » n'est pas forcément dans la liste officielle de la ligne.
@@ -57,17 +71,7 @@ document.getElementById("export-favs").addEventListener("click", async () => {
   const name = `mes-gares-${new Date().toISOString().slice(0, 10)}.json`;
   const file = new File([JSON.stringify(data, null, 2)], name, { type: "application/json" });
   try {
-    // Sur iPhone : feuille de partage (Fichiers, AirDrop, Messages…)
-    if (navigator.canShare?.({ files: [file] })) {
-      // Uniquement le fichier : un titre ou un texte deviendrait un fichier .txt séparé sur iPhone
-      await navigator.share({ files: [file] });
-    } else {
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(file);
-      link.download = name;
-      link.click();
-      setTimeout(() => URL.revokeObjectURL(link.href), 10000);
-    }
+    await shareFile(file);
     favsStatus(`${data.favorites.length} gare(s) exportée(s).`);
   } catch (err) {
     if (err.name !== "AbortError") favsStatus("Export impossible : " + err.message);
@@ -185,6 +189,21 @@ if ("serviceWorker" in navigator) {
 }
 
 // app.js donne la fonction de navigation (pour réafficher la page après un import)
+// Script du widget : Scriptable affiche comme script tout fichier .js du dossier
+// iCloud Drive › Scriptable. On le propose donc en fichier, comme l'export.
+document.getElementById("install-widget").addEventListener("click", async () => {
+  const status = document.getElementById("widget-status");
+  try {
+    const response = await fetch("scriptable/ProchainsTrains.js", { cache: "no-cache" });
+    if (!response.ok) throw new Error(`script introuvable (${response.status})`);
+    const file = new File([await response.text()], "Prochains trains.js", { type: "text/plain" }); // .js = script pour Scriptable
+    await shareFile(file);
+    status.innerHTML = "Choisis <b>Enregistrer dans Fichiers → iCloud Drive › Scriptable</b>, puis exporte tes gares au même endroit.";
+  } catch (err) {
+    if (err.name !== "AbortError") status.textContent = "Impossible de préparer le script : " + err.message;
+  }
+});
+
 document.getElementById("open-widget").addEventListener("click", () => {
   dialog.close();
   location.hash = "#/widget";

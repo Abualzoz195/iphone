@@ -40,6 +40,7 @@ const APP_FILES = [
   "fonts/fira-sans-500.woff2",
   "fonts/fira-sans-600.woff2",
   "fonts/fira-sans-700.woff2",
+  "scriptable/ProchainsTrains.js",
   "icons/icon-180.png",
   "icons/icon-512.png",
 ];

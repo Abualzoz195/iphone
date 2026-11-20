@@ -125,7 +125,7 @@ await page.click('.slot[data-index="0"] [data-day="6"]'); // ajoute le samedi
 await page.selectOption('.slot[data-index="0"] [data-field="fav"]', "METRO_14/71264");
 await page.click('input[name="outside"][value="none"]');
 log("page Widget", await text("#app"));
-await page.screenshot({ path: process.argv[3] || "/dev/null" });
+if (process.argv[3]) await page.screenshot({ path: process.argv[3] }); // capture facultative
 
 // Réglages, export, import
 await go("#/");
