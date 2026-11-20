@@ -113,6 +113,20 @@ if (start) {
   await page.keyboard.press("Escape"); // ferme la fenêtre
 }
 
+// Emploi du temps du widget
+await go("#/");
+await page.click("[data-action=settings]");
+await page.click("#open-widget");
+await page.clock.runFor(500);
+await page.click("[data-add-slot]");
+await page.fill('.slot[data-index="0"] [data-field="start"]', "17:40");
+await page.fill('.slot[data-index="0"] [data-field="end"]', "19:00");
+await page.click('.slot[data-index="0"] [data-day="6"]'); // ajoute le samedi
+await page.selectOption('.slot[data-index="0"] [data-field="fav"]', "METRO_14/71264");
+await page.click('input[name="outside"][value="none"]');
+log("page Widget", await text("#app"));
+await page.screenshot({ path: process.argv[3] || "/dev/null" });
+
 // Réglages, export, import
 await go("#/");
 await page.click("[data-action=settings]");

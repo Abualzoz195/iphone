@@ -23,6 +23,7 @@ La clé API n'est **jamais** dans le code : chaque appareil la garde pour lui (s
 | `js/pages/home.js` | Accueil : favoris, aperçus repliables, mode Modifier, carte « Mon trajet » |
 | `js/pages/lines.js` | Choix de ligne (RER, métro, bus), de gare, « Autour de moi » |
 | `js/pages/board.js` | Écran de quai et plan de ligne |
+| `js/pages/widget.js` | Emploi du temps du widget (créneaux horaires → gare affichée) |
 | `js/settings.js` | Réglages, export / import, compteur de requêtes, service worker |
 | `js/trip.js` | « Je monte dans ce train » (RER) |
 | `sw.js` | Service worker : app hors connexion, mises à jour, plans gardés |
@@ -69,6 +70,11 @@ Le widget affiche tes gares favorites, lues dans le fichier exporté par l'app.
    **Modifier le widget** → *Script* : `Prochains trains`.
    *Parameter* (facultatif) : vide = 1re gare (3 premières en grand widget), `2` = 2e gare de ta liste,
    ou un bout de nom (`chatelet`).
+
+**Emploi du temps** : dans l'app, **Réglages → Emploi du temps du widget**. Chaque créneau = heure de
+début, heure de fin, jours, gare favorite (un créneau peut passer minuit). En dehors des créneaux, le
+widget montre ta 1re gare, ou rien du tout (aucune requête). Réexporte après chaque modification.
+Le widget se rafraîchit au début et à la fin de chaque créneau ; un paramètre de widget reste prioritaire.
 
 Chaque affichage du widget fait 1 requête par gare montrée ; iOS le rafraîchit toutes les 5 à 15 min.
 

@@ -8,8 +8,12 @@
 //   2. Le widget prend automatiquement le fichier « mes-gares-….json » le plus récent.
 // Réexporte quand tu changes tes favoris.
 //
-// Paramètre du widget (appui long → Modifier le widget → Parameter) :
-//   vide       → 1re gare (petit et moyen widget), 3 premières (grand widget)
+// Emploi du temps : réglé dans l'app (Réglages → Emploi du temps du widget), transmis par
+// le fichier d'export. Ex. 8:30–9:30 en semaine → une gare, 17:40–19:00 → une autre.
+// Le widget se rafraîchit au début et à la fin de chaque créneau.
+//
+// Paramètre du widget (appui long → Modifier le widget → Parameter), prioritaire sur l'emploi du temps :
+//   vide       → emploi du temps, sinon 1re gare (petit et moyen widget), 3 premières (grand widget)
 //   2          → la 2e gare de ta liste (un numéro)
 //   chatelet   → la première gare dont le nom contient ce texte
 //
@@ -51,19 +55,83 @@ async function readFavorites() {
     }
     const data = JSON.parse(fm.readString(path));
     const list = (Array.isArray(data) ? data : data.favorites || []).filter((f) => f.widget && f.widget.lineRef);
-    if (list.length) return list;
+    const schedule = (!Array.isArray(data) && data.widgetSchedule) || { slots: [], outside: "first" };
+    if (list.length) return { list, schedule };
   }
   return null;
 }
 
-function pickFavorites(list, family, parameter) {
+// ---------- Emploi du temps ----------
+const toMinutes = (hhmm) => +hhmm.slice(0, 2) * 60 + +hhmm.slice(3, 5);
+const favKey = (f) => `${f.lineId}/${f.stationId}`;
+
+// Créneau en cours (gère les créneaux qui passent minuit, ex. 23:00 → 01:00)
+function activeSlot(schedule, now) {
+  const day = now.getDay();
+  const previousDay = (day + 6) % 7;
+  const m = now.getHours() * 60 + now.getMinutes();
+  return (schedule.slots || []).find((slot) => {
+    const start = toMinutes(slot.start);
+    const end = toMinutes(slot.end);
+    if (start < end) return slot.days.includes(day) && m >= start && m < end;
+    return (slot.days.includes(day) && m >= start) || (slot.days.includes(previousDay) && m < end);
+  });
+}
+
+// Prochain début ou fin de créneau (pour que le widget change de gare à l'heure)
+function nextBoundary(schedule, now) {
+  let best = null;
+  for (let shift = 0; shift <= 7; shift++) {
+    const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() + shift);
+    for (const slot of schedule.slots || []) {
+      if (!slot.days.includes(date.getDay())) continue;
+      const start = toMinutes(slot.start);
+      const end = toMinutes(slot.end);
+      const candidates = [start, end < start ? end + 1440 : end];
+      for (const m of candidates) {
+        const t = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, m);
+        if (t > now && (!best || t < best)) best = t;
+      }
+    }
+  }
+  return best;
+}
+
+const DAY_NAMES = ["dim.", "lun.", "mar.", "mer.", "jeu.", "ven.", "sam."];
+function nextSlotText(schedule, list, now) {
+  for (let shift = 0; shift <= 7; shift++) {
+    const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() + shift);
+    const upcoming = (schedule.slots || [])
+      .filter((s) => s.days.includes(date.getDay()))
+      .map((s) => ({ s, t: new Date(date.getFullYear(), date.getMonth(), date.getDate(), 0, toMinutes(s.start)) }))
+      .filter((x) => x.t > now)
+      .sort((a, b) => a.t - b.t)[0];
+    if (upcoming) {
+      const fav = list.find((f) => favKey(f) === upcoming.s.fav);
+      const when = shift === 0 ? "" : shift === 1 ? "demain " : `${DAY_NAMES[date.getDay()]} `;
+      return `Prochain créneau : ${when}${upcoming.s.start}${fav ? ` · ${fav.widget.stationName}` : ""}`;
+    }
+  }
+  return "Aucun créneau prévu";
+}
+
+// Gares à afficher. Ordre de priorité : paramètre du widget, emploi du temps, réglage par défaut.
+// Renvoie [] quand l'emploi du temps dit « ne rien afficher » (aucune requête).
+function pickFavorites(list, family, parameter, schedule, now) {
   const p = (parameter || "").trim();
   if (/^\d+$/.test(p)) return [list[Math.min(list.length, Math.max(1, +p)) - 1]];
   if (p) {
     const found = list.find((f) => compact(f.widget.stationName).includes(compact(p)));
     if (found) return [found];
   }
-  return list.slice(0, family === "large" ? 3 : 1);
+  const count = family === "large" ? 3 : 1;
+  if (schedule.slots && schedule.slots.length) {
+    const slot = activeSlot(schedule, now);
+    const fav = slot && list.find((f) => favKey(f) === slot.fav);
+    if (fav) return [fav, ...list.filter((f) => f !== fav)].slice(0, count);
+    if (schedule.outside === "none") return [];
+  }
+  return list.slice(0, count);
 }
 
 // ---------- API PRIM ----------
@@ -231,15 +299,27 @@ function messageWidget(message) {
 }
 
 async function buildWidget(family, parameter, apiKey) {
-  const list = await readFavorites();
-  if (!list) {
+  const saved = await readFavorites();
+  if (!saved) {
     return messageWidget("Exporte tes gares dans l'app (⚙ → Exporter) et enregistre le fichier dans iCloud Drive › Scriptable.");
   }
-  const favs = pickFavorites(list, family, parameter);
+  const { list, schedule } = saved;
+  const now = new Date();
+  // Rafraîchissement : toutes les 10 min, ou plus tôt si un créneau commence ou se termine
+  const boundary = parameter ? null : nextBoundary(schedule, now);
+  const nextRefresh = new Date(Math.min(now.getTime() + REFRESH_MINUTES * 60000, boundary ? boundary.getTime() + 5000 : Infinity));
+
+  const favs = pickFavorites(list, family, parameter, schedule, now);
+  if (!favs.length) {
+    // Hors créneau avec « ne rien afficher » : aucune requête à l'API
+    const idle = messageWidget(nextSlotText(schedule, list, now));
+    idle.refreshAfterDate = boundary ? new Date(boundary.getTime() + 5000) : nextRefresh;
+    return idle;
+  }
   const widget = new ListWidget();
   widget.backgroundColor = COLORS.bg;
   widget.setPadding(12, 14, 12, 14);
-  widget.refreshAfterDate = new Date(Date.now() + REFRESH_MINUTES * 60000);
+  widget.refreshAfterDate = nextRefresh;
   for (const [i, fav] of favs.entries()) {
     if (i) widget.addSpacer(10);
     try {

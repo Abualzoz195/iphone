@@ -960,3 +960,66 @@ body:has(.board-page) { background: var(--board-bg); }
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
 }
 .update-toast b { color: var(--accent); }
+
+/* ---------- Page Widget : emploi du temps ---------- */
+.dialog-link {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--soft-fill);
+  color: var(--accent);
+  font-size: 0.94rem;
+  text-align: left;
+}
+.slot-list { display: grid; gap: 12px; margin: 0 16px; padding: 0; list-style: none; }
+.slot { min-width: 0; padding: 14px 16px; border-radius: 22px; background: var(--app-panel); overflow: hidden; }
+.slot-times { display: flex; align-items: center; gap: 8px; }
+.slot-dash { color: var(--app-muted); }
+.slot-input {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--soft-fill);
+  color: var(--app-text);
+  font: inherit;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+.slot-times .slot-input { flex: 1 1 0; width: 0; } /* les champs se partagent la largeur */
+.slot-delete {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  margin-left: 4px;
+  border: 0;
+  border-radius: 50%;
+  background: #ff453a;
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.slot-days { display: flex; gap: 6px; margin-top: 10px; }
+.slot-day {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0;
+  height: 34px;
+  border: 0;
+  border-radius: 17px;
+  background: var(--soft-fill);
+  color: var(--app-muted);
+  font-weight: 600;
+}
+.slot-day.is-on { background: var(--accent); color: #fff; }
+.slot-fav { width: 100%; margin-top: 10px; }
+.slot-summary { margin: 8px 2px 0; color: var(--app-muted); font-size: 0.82rem; }
+.slot-add { width: 100%; border: 0; background: none; color: var(--accent); font: inherit; text-align: left; }
+.hint-inline { color: var(--app-muted); font-size: 0.82rem; }
+.group label.list-item { cursor: pointer; }
+.group input[type="radio"] { accent-color: var(--accent); width: 18px; height: 18px; margin: 0; }

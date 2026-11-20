@@ -6,17 +6,20 @@ import { endTrip } from "./trip.js";
 import { homePage, drawPreviews, startHomePreviews, toggleFavoritePreview, isEditing, setEditing } from "./pages/home.js";
 import { linesPage, linePage, nearbyPage } from "./pages/lines.js";
 import { boardPage, startBoard, isBoardShown } from "./pages/board.js";
+import { widgetPage } from "./pages/widget.js";
 import { openSettings, initSettings } from "./settings.js";
 
 // ---------- Routeur ----------
 function route() {
   stopTimers();
+  app.onclick = app.onchange = null; // écouteurs propres à une page (page Widget)
   document.title = "Prochains trains";
   const [, page, a, b] = location.hash.split("/");
   if (page) setEditing(false); // on quitte le mode Modifier en changeant de page
   if (page === "lines") linesPage();
   else if (page === "line") linePage(a);
   else if (page === "nearby") nearbyPage();
+  else if (page === "widget") widgetPage();
   else if (page === "board") boardPage(a, b);
   else homePage();
   window.scrollTo(0, 0);

@@ -4,6 +4,7 @@ import { usageStats, DAILY_QUOTA } from "./prim.js";
 import { rememberStop } from "./bus.js";
 import { store, apiKey, lineById, stationOf, favorites } from "./common.js";
 import { expandedKeys } from "./pages/home.js";
+import { getSchedule, setSchedule } from "./pages/widget.js";
 
 let route = () => {}; // fourni par app.js
 
@@ -51,6 +52,7 @@ document.getElementById("export-favs").addEventListener("click", async () => {
     exportedAt: new Date().toISOString(),
     favorites: withStops,
     expandedPreviews: expandedKeys(), // aperçus dépliés
+    widgetSchedule: getSchedule(), // emploi du temps du widget Scriptable
   };
   const name = `mes-gares-${new Date().toISOString().slice(0, 10)}.json`;
   const file = new File([JSON.stringify(data, null, 2)], name, { type: "application/json" });
@@ -104,6 +106,14 @@ document.getElementById("import-file").addEventListener("change", async (e) => {
       store.set("expandedPreviews", data.expandedPreviews.filter((k) => keys.has(k)));
     } else {
       store.set("expandedPreviews", null);
+    }
+    // Emploi du temps du widget : on garde les créneaux dont la gare a été importée
+    if (data.widgetSchedule && Array.isArray(data.widgetSchedule.slots)) {
+      const keys = new Set(valid.map((f) => `${f.lineId}/${f.stationId}`));
+      setSchedule({
+        slots: data.widgetSchedule.slots.filter((s) => keys.has(s.fav) && /^\d\d:\d\d$/.test(s.start) && /^\d\d:\d\d$/.test(s.end)),
+        outside: data.widgetSchedule.outside === "none" ? "none" : "first",
+      });
     }
     const skipped = list.length - valid.length;
     favsStatus(`${valid.length} gare(s) importée(s)${skipped ? `, ${skipped} ignorée(s)` : ""}.`);
@@ -174,6 +184,11 @@ if ("serviceWorker" in navigator) {
 }
 
 // app.js donne la fonction de navigation (pour réafficher la page après un import)
+document.getElementById("open-widget").addEventListener("click", () => {
+  dialog.close();
+  location.hash = "#/widget";
+});
+
 export function initSettings(onChange) {
   route = onChange;
 }
