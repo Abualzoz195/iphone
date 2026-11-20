@@ -47,16 +47,22 @@ async function readFavorites() {
   for (const fm of [FileManager.iCloud(), FileManager.local()]) {
     let dir;
     try { dir = fm.documentsDirectory(); } catch { continue; }
-    const files = fm.listContents(dir).filter((n) => /^mes-gares.*\.json$/i.test(n)).sort();
+    const files = fm.listContents(dir).filter((n) => /^mes-gares.*\.json$/i.test(n));
     if (!files.length) continue;
-    const path = fm.joinPath(dir, files[files.length - 1]); // le plus récent (date dans le nom)
-    if (fm.isFileStoredIniCloud && fm.isFileStoredIniCloud(path) && !fm.isFileDownloaded(path)) {
-      await fm.downloadFileFromiCloud(path);
+    // Le plus récemment modifié (deux exports le même jour : « mes-gares-…-20 2.json »)
+    const paths = files.map((n) => fm.joinPath(dir, n));
+    paths.sort((a, b) => fm.modificationDate(b) - fm.modificationDate(a));
+    for (const path of paths) {
+      try {
+        if (fm.isFileStoredIniCloud && fm.isFileStoredIniCloud(path) && !fm.isFileDownloaded(path)) {
+          await fm.downloadFileFromiCloud(path);
+        }
+        const data = JSON.parse(fm.readString(path));
+        const list = (Array.isArray(data) ? data : data.favorites || []).filter((f) => f.widget && f.widget.lineRef);
+        const schedule = (!Array.isArray(data) && data.widgetSchedule) || { slots: [], outside: "first" };
+        if (list.length) return { list, schedule }; // le plus récent qui contient des gares
+      } catch { /* fichier illisible : on essaie le suivant */ }
     }
-    const data = JSON.parse(fm.readString(path));
-    const list = (Array.isArray(data) ? data : data.favorites || []).filter((f) => f.widget && f.widget.lineRef);
-    const schedule = (!Array.isArray(data) && data.widgetSchedule) || { slots: [], outside: "first" };
-    if (list.length) return { list, schedule };
   }
   return null;
 }

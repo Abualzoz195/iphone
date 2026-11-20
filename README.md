@@ -64,7 +64,10 @@ Le widget affiche tes gares favorites, lues dans le fichier exporté par l'app.
 1. Installe **Scriptable** depuis l'App Store (gratuit).
 2. Dans Scriptable, **+**, colle tout le contenu de `scriptable/ProchainsTrains.js`, nomme le script `Prochains trains`.
 3. Lance-le une fois (▶︎) : il demande ta clé PRIM et la range dans le trousseau de l'iPhone.
-4. Dans l'app : **⚙ → Exporter → Enregistrer dans Fichiers → iCloud Drive › Scriptable**.
+4. Dans l'app : **⚙ → Exporter**. Dans la feuille de partage, choisis **Enregistrer dans Fichiers**
+   (Scriptable n'apparaît pas dans la liste des apps, c'est normal), puis **iCloud Drive › Scriptable** et **Enregistrer**.
+   Pas de dossier Scriptable dans iCloud Drive ? Ouvre Scriptable une fois et vérifie
+   **Réglages iOS → [ton nom] → iCloud → Apps utilisant iCloud → Scriptable** (activé).
    Le widget prend tout seul le fichier `mes-gares-….json` le plus récent : réexporte quand tu changes tes favoris.
 5. Sur l'écran d'accueil : appui long → **+** → **Scriptable** → taille → **Ajouter**, puis appui long sur le widget →
    **Modifier le widget** → *Script* : `Prochains trains`.

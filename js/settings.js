@@ -59,7 +59,8 @@ document.getElementById("export-favs").addEventListener("click", async () => {
   try {
     // Sur iPhone : feuille de partage (Fichiers, AirDrop, Messages…)
     if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: "Mes gares" });
+      // Uniquement le fichier : un titre ou un texte deviendrait un fichier .txt séparé sur iPhone
+      await navigator.share({ files: [file] });
     } else {
       const link = document.createElement("a");
       link.href = URL.createObjectURL(file);
