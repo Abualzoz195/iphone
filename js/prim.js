@@ -68,6 +68,10 @@ export function parseVisits(visits) {
     departures.push({
       id,
       mission: missionLabel(journey),
+      // Nom unique du train dans la journée (ex. « ERIO55 »), pour le retrouver dans une autre gare
+      trainName: text(journey.VehicleJourneyName).replace(/^RATP/, ""),
+      // Heure d'arrivée à cet arrêt (sert à l'estimation du trajet « Je monte dans ce train »)
+      arrival: new Date(call.ExpectedArrivalTime ?? call.AimedArrivalTime ?? expected),
       missionCode: text(journey.JourneyNote),
       destination: text(journey.DestinationName) || text(call.DestinationDisplay),
       direction: journey.DirectionRef?.value ?? "",

@@ -1,10 +1,11 @@
 // Navigation de l'app : accueil (favoris) → ligne → gare → écran de quai.
 // Les pages sont repérées par l'adresse après « # » (ex. #/board/RER_B/474151).
-import { NETWORK } from "./network.js?v=20261120-1200";
-import { DEFAULT_FAVORITES, DEFAULT_MESSAGE, SETTINGS } from "./config.js?v=20261120-1200";
-import { fetchDepartures, fetchMessages, PrimError } from "./prim.js?v=20261120-1200";
-import { rerScreen, metroScreen, lineBadge, escapeHtml, destinationHtml } from "./screens.js?v=20261120-1200";
-import { mountLinePlan } from "./lineplan.js?v=20261120-1200";
+import { NETWORK } from "./network.js?v=20261120-1258";
+import { DEFAULT_FAVORITES, DEFAULT_MESSAGE, SETTINGS } from "./config.js?v=20261120-1258";
+import { fetchDepartures, fetchMessages, PrimError } from "./prim.js?v=20261120-1258";
+import { rerScreen, metroScreen, lineBadge, escapeHtml, destinationHtml } from "./screens.js?v=20261120-1258";
+import { mountLinePlan } from "./lineplan.js?v=20261120-1258";
+import { openTripDialog, tripCardHtml, loadTrip, endTrip } from "./trip.js?v=20261120-1258";
 
 const app = document.getElementById("app");
 
@@ -132,6 +133,7 @@ function homePage() {
       right: cards ? `<button class="glass-btn ${editing ? "is-tinted" : ""}" data-action="edit">${editing ? "OK" : "Modifier"}</button>` : "",
     })}
     <h1 class="large-title">Mes gares</h1>
+    <div id="trip-slot"></div>
     ${!apiKey() ? `<p class="notice">Ajoute ta clé API PRIM dans <b>Réglages</b> pour voir les trains.</p>` : ""}
     <ul class="fav-list" id="fav-list">${cards || `<li class="glass empty">Aucune gare. Ajoutes-en une puis touche ☆ sur son écran.</li>`}</ul>
     ${editing ? `<p class="group-footer">Fais glisser ≡ pour changer l'ordre.</p>` : ""}
@@ -219,6 +221,8 @@ const hhmmLocal = (d) => `${String(d.getHours()).padStart(2, "0")}:${String(d.ge
 
 function drawPreviews() {
   const now = new Date();
+  const tripSlot = document.getElementById("trip-slot");
+  if (tripSlot) updateInPlace(tripSlot, tripCardHtml(now));
   for (const el of document.querySelectorAll("[data-preview]")) {
     const [lineId, stationId] = el.dataset.preview.split("/");
     const line = lineById(lineId);
@@ -238,6 +242,7 @@ function drawPreviews() {
 
 async function loadPreviews() {
   if (!apiKey()) return;
+  loadTrip(apiKey()).then(drawPreviews);
   await Promise.all(
     favorites().map(async ({ lineId, stationId }) => {
       const line = lineById(lineId);
@@ -476,6 +481,16 @@ function boardPage(lineId, stationId) {
   });
 
   mountLinePlan(document.getElementById("line-plan"), line, station.id);
+
+  // RER : toucher un train → « Je monte dans ce train »
+  if (line.mode === "RER") {
+    document.getElementById("screens").addEventListener("click", (e) => {
+      const id = e.target.closest("[data-train]")?.dataset.train;
+      const train = board.departures.find((d) => d.id === id);
+      if (!train || train.cancelled) return;
+      openTripDialog({ line, station, train, apiKey: apiKey(), onStart: () => (location.hash = "#/") });
+    });
+  }
   startBoard();
 }
 
@@ -519,6 +534,10 @@ document.addEventListener("visibilitychange", () => {
 // ---------- Réglages ----------
 const dialog = document.getElementById("settings-dialog");
 app.addEventListener("click", (e) => {
+  if (e.target.closest("[data-action=end-trip]")) {
+    endTrip();
+    drawPreviews();
+  }
   if (e.target.closest("[data-action=edit]")) {
     editing = !editing;
     homePage();

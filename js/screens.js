@@ -1,5 +1,5 @@
 // Rendu HTML des deux types d'écrans de quai : RER (liste de trains) et métro (1er / 2e métro).
-import { DESTINATION_ALIASES, AIRPORTS, SETTINGS } from "./config.js?v=20261120-1200";
+import { DESTINATION_ALIASES, AIRPORTS, SETTINGS } from "./config.js?v=20261120-1258";
 
 export const escapeHtml = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
@@ -52,7 +52,8 @@ function rerRow(dep, now) {
   else if (dep.delayMinutes >= 2) notes.push(`<span class="row-note is-alert">Retard +${dep.delayMinutes}'</span>`);
   if (dep.platform) notes.push(`<span class="row-voie">Voie <b>${escapeHtml(dep.platform)}</b></span>`);
 
-  return `<li class="rer-row ${dep.cancelled ? "is-cancelled" : ""}">
+  // data-train : toucher la ligne ouvre « Je monte dans ce train »
+  return `<li class="rer-row ${dep.cancelled ? "is-cancelled" : ""}" data-train="${escapeHtml(dep.id)}">
     <span class="rer-mission">${escapeHtml(dep.mission || "")}</span>
     <span class="rer-dest">${destinationHtml(dep.destination)}</span>
     <span class="rer-wait">${rerWait(dep, now)}</span>

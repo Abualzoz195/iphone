@@ -1,7 +1,7 @@
 // Plan de ligne officiel (PDF RATP/IDFM) affiché en bande sous les écrans de quai.
 // Le PDF est dessiné dans la page avec PDF.js (vendor/pdfjs), sans ouvrir d'autre page.
 
-import { metroPlanSvg } from "./metroplan.js?v=20261120-1200";
+import { metroPlanSvg } from "./metroplan.js?v=20261120-1258";
 
 const RER_PLAN_BASE = "https://assets-bff.bonjour-ratp.fr/maps/lineMaps/plan-de-ligne_";
 const PDFJS_DIR = "vendor/pdfjs/";
