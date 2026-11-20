@@ -528,3 +528,12 @@ dialog input {
 .plan-credit { margin: 6px 2px 0; color: #777; font-size: 12px; }
 .plan-credit a { text-decoration: underline; }
 body:has(.board-page) { background: #050505; }
+.plan-open {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #0b1033;
+  font-weight: 700;
+}

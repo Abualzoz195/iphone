@@ -1,15 +1,17 @@
 // Plan de ligne officiel (PDF RATP/IDFM) affiché en bande sous les écrans de quai.
 // Le PDF est dessiné dans la page avec PDF.js (vendor/pdfjs), sans ouvrir d'autre page.
 
-const PLAN_BASE = "https://assets-bff.bonjour-ratp.fr/maps/lineMaps/plan-de-ligne_";
+const RER_PLAN_BASE = "https://assets-bff.bonjour-ratp.fr/maps/lineMaps/plan-de-ligne_";
+const METRO_PLAN_BASE = "https://www.ratp.fr/sites/default/files/lines-assets/plan-de-ligne/metro/plan-de-ligne_metro_ligne-";
 const PDFJS_DIR = "vendor/pdfjs/";
 const MAX_CANVAS_PIXELS = 16_000_000; // limite de taille des images sur iPhone
 
 // Adresse du PDF officiel d'une ligne, ou null si on ne la connaît pas.
 export function planUrl(line) {
   const id = line.ref.split(":")[3]; // « STIF:Line::C01743: » → « C01743 »
-  if (line.mode === "RER") return `${PLAN_BASE}RER_SNCF_ligne-${line.code}_LIG:IDFM:${id}.pdf`;
-  return null; // métro : format d'adresse pas encore connu
+  if (line.mode === "RER") return `${RER_PLAN_BASE}RER_SNCF_ligne-${line.code}_LIG:IDFM:${id}.pdf`;
+  if (line.mode === "METRO") return `${METRO_PLAN_BASE}${line.code}.pdf`; // ex. …ligne-1.pdf, …ligne-3bis.pdf
+  return null;
 }
 
 // Charge PDF.js une seule fois, au premier plan affiché.
@@ -95,8 +97,10 @@ export function mountLinePlan(section, line) {
       status.hidden = true;
       strip.scrollLeft = position * (strip.scrollWidth - strip.clientWidth);
     } catch {
-      status.textContent = "Plan indisponible (pas de réseau ?).";
+      // Pas de réseau, ou site qui refuse l'affichage dans une autre app : on propose de l'ouvrir.
+      status.innerHTML = `Impossible d'afficher le plan ici.<br><a class="plan-open" href="${url}" target="_blank" rel="noopener">Ouvrir le plan</a>`;
       status.hidden = false;
+      toggle.hidden = true;
     }
   };
 
