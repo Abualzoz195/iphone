@@ -1,12 +1,12 @@
 // Navigation de l'app : accueil (favoris) → ligne → gare → écran de quai.
 // Les pages sont repérées par l'adresse après « # » (ex. #/board/RER_B/474151).
-import { NETWORK } from "./network.js?v=20261120-1557";
-import { DEFAULT_FAVORITES, DEFAULT_MESSAGE, SETTINGS } from "./config.js?v=20261120-1557";
-import { fetchDepartures, fetchMessages, PrimError, usageStats, DAILY_QUOTA } from "./prim.js?v=20261120-1557";
-import { rerScreen, metroScreen, lineBadge, escapeHtml, destinationHtml } from "./screens.js?v=20261120-1557";
-import { mountLinePlan } from "./lineplan.js?v=20261120-1557";
-import { openTripDialog, tripCardHtml, loadTrip, endTrip } from "./trip.js?v=20261120-1557";
-import { BUS_LINES, ensureBusStops, hasBusStops, nearbyBusStops, rememberStop } from "./bus.js?v=20261120-1557";
+import { NETWORK } from "./network.js?v=20261120-1608";
+import { DEFAULT_FAVORITES, DEFAULT_MESSAGE, SETTINGS } from "./config.js?v=20261120-1608";
+import { fetchDepartures, fetchMessages, PrimError, usageStats, DAILY_QUOTA } from "./prim.js?v=20261120-1608";
+import { rerScreen, metroScreen, lineBadge, escapeHtml, destinationHtml } from "./screens.js?v=20261120-1608";
+import { mountLinePlan } from "./lineplan.js?v=20261120-1608";
+import { openTripDialog, tripCardHtml, loadTrip, endTrip } from "./trip.js?v=20261120-1608";
+import { BUS_LINES, ensureBusStops, hasBusStops, nearbyBusStops, rememberStop } from "./bus.js?v=20261120-1608";
 
 const app = document.getElementById("app");
 

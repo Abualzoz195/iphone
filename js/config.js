@@ -18,8 +18,8 @@ export const AIRPORTS = [
 export const DEFAULT_MESSAGE =
   "Attentifs, ensemble • Ne pas se séparer de ses effets personnels • Signaler à nos agents tout objet abandonné, comportement ou situation inhabituels";
 
-// Favori ajouté au tout premier lancement.
-export const DEFAULT_FAVORITES = [{ lineId: "RER_B", stationId: "474151" }];
+// Favoris au tout premier lancement : aucun (chacun ajoute les siens).
+export const DEFAULT_FAVORITES = [];
 
 export const SETTINGS = {
   departuresRefreshSeconds: 30, // fréquence de mise à jour des horaires
