@@ -348,7 +348,7 @@ function bigRow(container, deps) {
   dest.minimumScaleFactor = 0.75;
   const row = block.addStack();
   row.addSpacer();
-  waitBox(row, d, 20, 74); // 74 pt réservés pour « 19:05 » en 20 pt
+  waitBox(row, d, 20); // seule sur sa ligne : le carré prend la largeur du texte, sans coupure
 }
 
 function directionStack(container, groups, rowsPerDirection, compact) {
