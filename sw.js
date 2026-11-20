@@ -8,7 +8,7 @@
 // - API PRIM : jamais mise en cache (horaires toujours en direct).
 //
 // Pour forcer un nettoyage complet des caches, change le numéro de CACHE_VERSION.
-const CACHE_VERSION = 6; // 6 : icônes et manifeste pris en direct
+const CACHE_VERSION = 7; // 7 : icônes et manifeste hors du service worker
 const APP_CACHE = `app-${CACHE_VERSION}`;
 const PLANS_CACHE = `plans-${CACHE_VERSION}`;
 const LIB_CACHE = `lib-${CACHE_VERSION}`;
@@ -18,7 +18,6 @@ const PLAN_MAX_AGE_MS = 7 * 24 * 3600 * 1000;
 const APP_FILES = [
   "./",
   "index.html",
-  "manifest.webmanifest",
   "css/style.css",
   "js/app.js",
   "js/common.js",
@@ -41,10 +40,6 @@ const APP_FILES = [
   "fonts/fira-sans-600.woff2",
   "fonts/fira-sans-700.woff2",
   "scriptable/ProchainsTrains.js",
-  "icons/icon-32.png",
-  "icons/icon-180.png",
-  "icons/icon-192.png",
-  "icons/icon-512.png",
 ];
 
 self.addEventListener("install", (event) => {
@@ -77,8 +72,9 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.includes("/vendor/")) return event.respondWith(cacheFirst(request, LIB_CACHE));
   // Script du widget : toujours la dernière version (on l'installe pour le copier dans Scriptable)
   if (url.pathname.includes("/scriptable/")) return event.respondWith(networkFirst(request));
-  // Icônes et manifeste : la dernière version (iOS les lit au moment de « Sur l'écran d'accueil »)
-  if (url.pathname.includes("/icons/") || url.pathname.endsWith(".webmanifest")) return event.respondWith(networkFirst(request));
+  // Icônes et manifeste : le service worker ne s'en mêle pas du tout (iOS les charge lui-même
+  // au moment de « Sur l'écran d'accueil » ; passer par le cache lui donnait l'icône « P »)
+  if (url.pathname.includes("/icons/") || url.pathname.endsWith(".webmanifest")) return;
   event.respondWith(staleWhileRevalidate(request, event));
 });
 
