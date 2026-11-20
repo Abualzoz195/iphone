@@ -8,7 +8,7 @@
 // - API PRIM : jamais mise en cache (horaires toujours en direct).
 //
 // Pour forcer un nettoyage complet des caches, change le numéro de CACHE_VERSION.
-const CACHE_VERSION = 5; // 5 : nouvelle icône
+const CACHE_VERSION = 6; // 6 : icônes et manifeste pris en direct
 const APP_CACHE = `app-${CACHE_VERSION}`;
 const PLANS_CACHE = `plans-${CACHE_VERSION}`;
 const LIB_CACHE = `lib-${CACHE_VERSION}`;
@@ -77,6 +77,8 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.includes("/vendor/")) return event.respondWith(cacheFirst(request, LIB_CACHE));
   // Script du widget : toujours la dernière version (on l'installe pour le copier dans Scriptable)
   if (url.pathname.includes("/scriptable/")) return event.respondWith(networkFirst(request));
+  // Icônes et manifeste : la dernière version (iOS les lit au moment de « Sur l'écran d'accueil »)
+  if (url.pathname.includes("/icons/") || url.pathname.endsWith(".webmanifest")) return event.respondWith(networkFirst(request));
   event.respondWith(staleWhileRevalidate(request, event));
 });
 
