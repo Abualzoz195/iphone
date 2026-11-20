@@ -24,6 +24,21 @@
   --app-muted: #8e8e93;
   --accent: #0a84ff;
   --star: #ffd60a;
+  /* Couleurs qui changent avec le thème clair / sombre */
+  --glass-bg: rgba(120, 120, 128, 0.26);
+  --glass-press: rgba(160, 160, 170, 0.36);
+  --glass-border: rgba(255, 255, 255, 0.16);
+  --glass-highlight: rgba(255, 255, 255, 0.22);
+  --glass-shadow: rgba(0, 0, 0, 0.35);
+  --separator: rgba(255, 255, 255, 0.12);
+  --chevron: rgba(255, 255, 255, 0.35);
+  --soft-fill: rgba(255, 255, 255, 0.12);
+  --soft-press: rgba(255, 255, 255, 0.2);
+  --board-bg: #050505;
+  --hud-bg: rgba(0, 0, 0, 0.45);
+  --hud-fg: rgba(255, 255, 255, 0.45);
+  --toast-bg: rgba(40, 40, 46, 0.92);
+  --toast-fg: #ffffff;
 
   /* Écran RER (fond blanc, texte bleu foncé) */
   --rer-head: #ffffff;
@@ -49,6 +64,35 @@
   /* Police de l'app : celle du système (SF Pro sur iPhone) */
   --ui-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   color-scheme: dark;
+}
+
+/* ---------- Mode clair : suit le réglage de l'iPhone ---------- */
+@media (prefers-color-scheme: light) {
+  :root {
+    --app-bg: #f2f2f7;
+    --app-panel: #ffffff;
+    --app-press: #e5e5ea;
+    --app-line: #c6c6c8;
+    --app-text: #000000;
+    --app-muted: #6c6c70;
+    --accent: #007aff;
+    --star: #ffcc00;
+    --glass-bg: rgba(255, 255, 255, 0.62);
+    --glass-press: rgba(255, 255, 255, 0.85);
+    --glass-border: rgba(0, 0, 0, 0.08);
+    --glass-highlight: rgba(255, 255, 255, 0.9);
+    --glass-shadow: rgba(0, 0, 0, 0.12);
+    --separator: rgba(60, 60, 67, 0.18);
+    --chevron: rgba(60, 60, 67, 0.3);
+    --soft-fill: rgba(120, 120, 128, 0.14);
+    --soft-press: rgba(120, 120, 128, 0.24);
+    --board-bg: #e5e5ea;
+    --hud-bg: rgba(255, 255, 255, 0.7);
+    --hud-fg: rgba(60, 60, 67, 0.6);
+    --toast-bg: rgba(255, 255, 255, 0.92);
+    --toast-fg: #000000;
+    color-scheme: light;
+  }
 }
 
 * { box-sizing: border-box; }
@@ -84,14 +128,14 @@ button { font: inherit; color: inherit; cursor: pointer; }
 /* Règle Liquid Glass : le verre est réservé à la couche de navigation (boutons et barres
    flottants). Le contenu (cartes, listes) reste sur des fonds pleins, et jamais de verre sur du verre. */
 .glass-btn {
-  background: rgba(120, 120, 128, 0.26);
+  background: var(--glass-bg);
   -webkit-backdrop-filter: blur(28px) saturate(180%);
   backdrop-filter: blur(28px) saturate(180%);
-  border: 0.5px solid rgba(255, 255, 255, 0.16);
+  border: 0.5px solid var(--glass-border);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 1px 0 var(--glass-highlight),
     inset 0 -1px 0 rgba(255, 255, 255, 0.04),
-    0 8px 30px rgba(0, 0, 0, 0.35);
+    0 8px 30px var(--glass-shadow);
 }
 
 /* Contenu : fonds pleins façon listes groupées d'iOS */
@@ -116,7 +160,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   min-height: 60px;
   padding: 8px 16px;
   /* Fondu doux : le contenu s'efface sous les boutons flottants (scroll edge effect) */
-  background: linear-gradient(var(--app-bg) 55%, rgba(0, 0, 0, 0));
+  background: linear-gradient(var(--app-bg) 55%, transparent);
 }
 .nav-left { justify-self: start; display: flex; align-items: center; gap: 8px; }
 .nav-right { justify-self: end; display: flex; align-items: center; gap: 8px; }
@@ -148,9 +192,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
   transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.2s ease;
 }
 .glass-btn.round { width: 44px; padding: 0; }
-.glass-btn:active { transform: scale(1.08); background: rgba(160, 160, 170, 0.36); transition-duration: 0.12s; }
+.glass-btn:active { transform: scale(1.08); background: var(--glass-press); transition-duration: 0.12s; }
 /* Teinte : uniquement l'action principale de l'écran */
-.glass-btn.is-tinted { background: rgba(10, 132, 255, 0.88); border-color: rgba(255, 255, 255, 0.28); font-weight: 600; }
+.glass-btn.is-tinted { background: var(--accent); border-color: rgba(255, 255, 255, 0.28); color: #fff; font-weight: 600; }
 .nav-star { color: var(--star); }
 
 .large-title { margin: 6px 20px 16px; font-size: 2.0rem; font-weight: 700; letter-spacing: 0.2px; }
@@ -188,12 +232,12 @@ button { font: inherit; color: inherit; cursor: pointer; }
   top: 0;
   left: 18px;
   right: 18px;
-  border-top: 0.5px solid rgba(255, 255, 255, 0.12);
+  border-top: 0.5px solid var(--separator);
 }
 .list-item:active { background: var(--app-press); }
 .list-item-name { flex: 1; min-width: 0; font-size: 1.0rem; line-height: 1.25; }
 .distance { color: var(--app-muted); font-size: 0.882rem; }
-.chevron { color: rgba(255, 255, 255, 0.35); font-size: 1.294rem; font-weight: 300; }
+.chevron { color: var(--chevron); font-size: 1.294rem; font-weight: 300; }
 
 .empty { margin: 0; padding: 16px 18px; color: var(--app-muted); font-size: 0.882rem; line-height: 1.4; list-style: none; }
 .glass.empty { border-radius: 26px; }
@@ -250,7 +294,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   padding: 28px 20px calc(14px + env(safe-area-inset-bottom));
   pointer-events: none;
   /* Fondu doux sous la barre (scroll edge effect du bas) */
-  background: linear-gradient(rgba(0, 0, 0, 0), var(--app-bg) 70%);
+  background: linear-gradient(transparent, var(--app-bg) 70%);
 }
 .toolbar > * { pointer-events: auto; }
 .toolbar .glass-btn { height: 50px; border-radius: 25px; }
@@ -261,7 +305,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .fav-card { position: relative; border-radius: 26px; overflow: hidden; background: var(--app-panel); }
 .fav-head { display: flex; align-items: center; }
 .fav-link { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 14px 4px 14px 18px; }
-.fav-link:active, .fav-preview-link:active { background: rgba(255, 255, 255, 0.06); }
+.fav-link:active, .fav-preview-link:active { background: var(--app-press); }
 /* Chevron : pointe à droite replié, tourne vers le bas déplié */
 .fav-toggle {
   flex: none;
@@ -302,7 +346,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .drag-handle {
   flex: none;
   padding: 8px 2px 8px 14px;
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--chevron);
   font-size: 1.294rem;
   line-height: 1;
   touch-action: none; /* le doigt déplace la gare au lieu de faire défiler */
@@ -425,8 +469,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .badge-bus .badge-line.is-long { font-size: calc(var(--size) * 0.42); }
 
 /* ---------- Écran de quai : cadre commun ---------- */
-.board-page { background: #050505; }
-.board-page .navbar { background: linear-gradient(#050505 60%, rgba(5, 5, 5, 0)); }
+.board-page { background: var(--board-bg); }
+.board-page .navbar { background: linear-gradient(var(--board-bg) 60%, transparent); }
 
 .screens {
   display: grid;
@@ -681,7 +725,7 @@ dialog input {
   color: #ffffff;
   font-weight: 700;
 }
-.dialog-actions button.secondary { background: rgba(255, 255, 255, 0.12); color: var(--app-text); }
+.dialog-actions button.secondary { background: var(--soft-fill); color: var(--app-text); }
 
 @media (prefers-reduced-motion: reduce) {
   .clock-colon { animation: none; }
@@ -699,12 +743,13 @@ dialog input {
   color: var(--app-muted);
 }
 .plan-toggle {
-  padding: 5px 12px;
-  border: 1px solid #2a2a2a;
-  border-radius: 8px;
-  background: #151515;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 16px;
+  background: var(--soft-fill);
   color: var(--app-text);
   font-size: 14px;
+  font-weight: 500;
 }
 .plan-strip {
   overflow-x: auto;
@@ -718,7 +763,7 @@ dialog input {
 .plan-credit { margin: 6px 2px 0; color: #777; font-size: 12px; }
 .plan-credit a { text-decoration: underline; }
 html:has(.board-page),
-body:has(.board-page) { background: #050505; }
+body:has(.board-page) { background: var(--board-bg); }
 .plan-open {
   display: inline-block;
   margin-top: 10px;
@@ -752,11 +797,11 @@ body:has(.board-page) { background: #050505; }
   padding: 10px;
   border: 0;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--soft-fill);
   color: var(--app-text);
   font-weight: 600;
 }
-.dialog-row button:active { background: rgba(255, 255, 255, 0.2); }
+.dialog-row button:active { background: var(--soft-press); }
 .hint.version { margin-top: 16px; font-size: 12px; opacity: 0.7; }
 
 /* ---------- « Je monte dans ce train » ---------- */
@@ -881,8 +926,8 @@ body:has(.board-page) { background: #050505; }
   gap: 1px;
   padding: 3px 6px;
   border-radius: 6px;
-  background: rgba(0, 0, 0, 0.45);
-  color: rgba(255, 255, 255, 0.45);
+  background: var(--hud-bg);
+  color: var(--hud-fg);
   font: 500 9.5px/1.2 ui-monospace, "SF Mono", Menlo, monospace;
   font-variant-numeric: tabular-nums;
   pointer-events: none;
@@ -904,12 +949,12 @@ body:has(.board-page) { background: #050505; }
   z-index: 20;
   transform: translateX(-50%);
   padding: 10px 18px;
-  border: 0.5px solid rgba(255, 255, 255, 0.2);
+  border: 0.5px solid var(--glass-border);
   border-radius: 22px;
-  background: rgba(40, 40, 46, 0.92);
+  background: var(--toast-bg);
   -webkit-backdrop-filter: blur(20px);
   backdrop-filter: blur(20px);
-  color: #fff;
+  color: var(--toast-fg);
   font-size: 0.88rem;
   white-space: nowrap;
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
