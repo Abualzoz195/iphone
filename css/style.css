@@ -843,3 +843,26 @@ body:has(.board-page) { background: #050505; }
 .trip-next-time small { color: var(--app-muted); font-size: 0.72rem; }
 @media (prefers-reduced-motion: reduce) { .trip-dot { animation: none; } }
 .fav-preview-link[hidden] { display: none; }
+
+/* ---------- Compteur de requêtes (pour les connaisseurs : petit et discret) ---------- */
+.quota-hud {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 62px);
+  right: calc(env(safe-area-inset-right) + 10px);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.45);
+  color: rgba(255, 255, 255, 0.45);
+  font: 500 9.5px/1.2 ui-monospace, "SF Mono", Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.quota-hud.is-low { color: rgba(255, 159, 10, 0.85); }
+/* Place libre sous la barre du haut pour le compteur (écran de gare, recherche) */
+.board-page .screens { padding-top: 34px; }
+.search-row { margin-top: 34px !important; }

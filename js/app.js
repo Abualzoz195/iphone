@@ -1,11 +1,11 @@
 // Navigation de l'app : accueil (favoris) → ligne → gare → écran de quai.
 // Les pages sont repérées par l'adresse après « # » (ex. #/board/RER_B/474151).
-import { NETWORK } from "./network.js?v=20261120-1512";
-import { DEFAULT_FAVORITES, DEFAULT_MESSAGE, SETTINGS } from "./config.js?v=20261120-1512";
-import { fetchDepartures, fetchMessages, PrimError } from "./prim.js?v=20261120-1512";
-import { rerScreen, metroScreen, lineBadge, escapeHtml, destinationHtml } from "./screens.js?v=20261120-1512";
-import { mountLinePlan } from "./lineplan.js?v=20261120-1512";
-import { openTripDialog, tripCardHtml, loadTrip, endTrip } from "./trip.js?v=20261120-1512";
+import { NETWORK } from "./network.js?v=20261120-1533";
+import { DEFAULT_FAVORITES, DEFAULT_MESSAGE, SETTINGS } from "./config.js?v=20261120-1533";
+import { fetchDepartures, fetchMessages, PrimError, usageStats, DAILY_QUOTA } from "./prim.js?v=20261120-1533";
+import { rerScreen, metroScreen, lineBadge, escapeHtml, destinationHtml } from "./screens.js?v=20261120-1533";
+import { mountLinePlan } from "./lineplan.js?v=20261120-1533";
+import { openTripDialog, tripCardHtml, loadTrip, endTrip } from "./trip.js?v=20261120-1533";
 
 const app = document.getElementById("app");
 
@@ -645,3 +645,27 @@ document.getElementById("import-file").addEventListener("change", async (e) => {
     favsStatus("Import impossible : " + err.message);
   }
 });
+
+// ---------- Compteur de requêtes (discret, en haut à droite, sur toutes les pages) ----------
+// Ligne 1 : requêtes de la dernière minute. Ligne 2 : « Prochains passages » restants
+// aujourd'hui (compte local, ≈) et autonomie estimée au débit actuel, app ouverte.
+const hud = document.createElement("div");
+hud.className = "quota-hud";
+hud.setAttribute("aria-hidden", "true");
+document.body.appendChild(hud);
+
+function formatDuration(minutes) {
+  if (!isFinite(minutes)) return "∞";
+  if (minutes < 60) return `${Math.floor(minutes)} min`;
+  const h = Math.floor(minutes / 60);
+  return h >= 24 ? "> 24 h" : `${h} h ${String(Math.floor(minutes % 60)).padStart(2, "0")}`;
+}
+
+function drawHud() {
+  const { perMinute, remaining, minutesLeft, usage } = usageStats();
+  hud.innerHTML = `<span>${perMinute} req/min</span><span>≈${remaining}/${DAILY_QUOTA} · ${formatDuration(minutesLeft)}</span>`;
+  hud.title = `Aujourd'hui (UTC) : passages ${usage.passages}, info trafic ${usage.infotrafic}, Navitia ${usage.navitia}`;
+  hud.classList.toggle("is-low", remaining < 150);
+}
+drawHud();
+setInterval(drawHud, 2000);

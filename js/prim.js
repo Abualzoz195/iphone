@@ -6,19 +6,73 @@ const BASE_URL = "https://prim.iledefrance-mobilites.fr/marketplace";
 export class PrimError extends Error {
   constructor(kind, message) {
     super(message);
-    this.kind = kind; // "auth" | "network" | "http"
+    this.kind = kind; // "auth" | "network" | "quota" | "http"
   }
+}
+
+// ---------- Compteur de requêtes (quota PRIM : 1 000 / jour et par API) ----------
+// L'API ne laisse pas le navigateur lire son compteur officiel : l'app compte donc elle-même
+// ses requêtes. Remise à zéro à minuit UTC (1 h ou 2 h du matin à Paris), comme le quota PRIM.
+export const DAILY_QUOTA = 1000;
+const USAGE_KEY = "primUsage";
+const requestLog = []; // horodatage des requêtes de cette session (pour le débit par minute)
+
+const apiOf = (path) => (path.startsWith("/stop-monitoring") ? "passages" : path.startsWith("/general-message") ? "infotrafic" : "navitia");
+const utcDay = () => new Date().toISOString().slice(0, 10);
+
+function readUsage() {
+  try {
+    const usage = JSON.parse(localStorage.getItem(USAGE_KEY));
+    if (usage?.day === utcDay()) return usage;
+  } catch { /* stockage indisponible */ }
+  return { day: utcDay(), passages: 0, infotrafic: 0, navitia: 0 };
+}
+function writeUsage(usage) {
+  try { localStorage.setItem(USAGE_KEY, JSON.stringify(usage)); } catch { /* */ }
+}
+function countRequest(api) {
+  requestLog.push({ at: Date.now(), api });
+  const usage = readUsage();
+  usage[api] = (usage[api] ?? 0) + 1;
+  writeUsage(usage);
+}
+
+// Débit = requêtes de la dernière minute. La fenêtre fait 59 s pour contenir exactement
+// deux mises à jour (toutes les 30 s), sans en compter une troisième par effet de bord.
+const WINDOW_MS = 59000;
+export function usageStats() {
+  const now = Date.now();
+  while (requestLog.length && now - requestLog[0].at > WINDOW_MS) requestLog.shift();
+  const perMinute = requestLog.length;
+  const passagesPerMinute = requestLog.filter((r) => r.api === "passages").length;
+  const usage = readUsage();
+  const remaining = Math.max(0, DAILY_QUOTA - usage.passages);
+  return {
+    perMinute,
+    remaining, // « Prochains passages », le quota qui s'épuise en premier
+    minutesLeft: passagesPerMinute > 0 ? remaining / passagesPerMinute : Infinity,
+    usage,
+  };
 }
 
 async function primGet(path, params, apiKey) {
   const url = new URL(BASE_URL + path);
   for (const [key, value] of Object.entries(params)) url.searchParams.set(key, value);
+  const api = apiOf(path);
+  countRequest(api);
 
   let response;
   try {
     response = await fetch(url, { headers: { apikey: apiKey, Accept: "application/json" } });
   } catch {
     throw new PrimError("network", "Pas de connexion à l'API PRIM");
+  }
+  if (response.status === 429) {
+    // Quota du jour épuisé : le compteur local se cale sur la réalité
+    const usage = readUsage();
+    usage[api] = Math.max(usage[api] ?? 0, DAILY_QUOTA);
+    writeUsage(usage);
+    throw new PrimError("quota", "Quota du jour épuisé (remise à zéro vers 1 h du matin)");
   }
   if (response.status === 401 || response.status === 403) {
     throw new PrimError("auth", "Clé API refusée");
