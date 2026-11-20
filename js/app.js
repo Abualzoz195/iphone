@@ -72,8 +72,20 @@ function locate() {
 }
 
 // Barre du haut façon iOS : bouton retour à gauche, titre au centre, actions à droite.
+// Icônes (traits SVG, couleur du texte)
+const svg = (body, fill = "none") =>
+  `<svg viewBox="0 0 24 24" width="22" height="22" fill="${fill}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+const ICONS = {
+  back: svg(`<path d="M15 18l-6-6 6-6"/>`),
+  plus: svg(`<path d="M12 5v14M5 12h14"/>`),
+  locate: svg(`<path d="M3 11l18-8-8 18-2-8-8-2z"/>`, "currentColor"),
+  star: (on) => svg(`<path d="M12 2.8l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.6l-5.8 3.1 1.1-6.5-4.7-4.6 6.5-.9z"/>`, on ? "currentColor" : "none"),
+  gear: svg(`<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>`),
+};
+
+// Barre du haut façon Liquid Glass : boutons en verre flottant, titre au centre.
 function navbar(title, { back, backLabel = "Retour", left = "", right = "", border = true } = {}) {
-  const backHtml = back ? `<a class="nav-btn" href="${back}"><span class="nav-chevron">‹</span>${escapeHtml(backLabel)}</a>` : "";
+  const backHtml = back ? `<a class="glass-btn round" href="${back}" aria-label="${escapeHtml(backLabel)}">${ICONS.back}</a>` : "";
   return `<header class="navbar ${border ? "has-border" : ""}">
     <div class="nav-left">${backHtml}${left}</div>
     <h1 class="nav-title">${title}</h1>
@@ -90,13 +102,13 @@ let editing = false; // mode « Modifier » de l'accueil
 function favoriteCard(fav, line, station) {
   const key = `${line.id}/${station.id}`;
   if (editing) {
-    return `<li class="fav-card is-editing" data-key="${key}">
+    return `<li class="fav-card glass is-editing" data-key="${key}">
       <button class="fav-delete" data-delete="${key}" aria-label="Retirer ${escapeHtml(station.name)}">−</button>
       ${lineBadge(line)}<span class="fav-name">${escapeHtml(station.name)}</span>
       <span class="drag-handle" aria-label="Déplacer">≡</span>
     </li>`;
   }
-  return `<li class="fav-card" data-key="${key}">
+  return `<li class="fav-card glass" data-key="${key}">
     <a class="fav-link" href="#/board/${key}">
       <div class="fav-head">${lineBadge(line)}<span class="fav-name">${escapeHtml(station.name)}</span><span class="chevron">›</span></div>
       <div class="preview" data-preview="${key}"></div>
@@ -116,17 +128,17 @@ function homePage() {
   app.innerHTML = `<div class="page">
     ${navbar("", {
       border: false,
-      left: `<button class="nav-btn" data-action="settings">Réglages</button>`,
-      right: cards ? `<button class="nav-btn ${editing ? "is-bold" : ""}" data-action="edit">${editing ? "OK" : "Modifier"}</button>` : "",
+      left: `<button class="glass-btn round" data-action="settings" aria-label="Réglages">${ICONS.gear}</button>`,
+      right: cards ? `<button class="glass-btn ${editing ? "is-tinted" : ""}" data-action="edit">${editing ? "OK" : "Modifier"}</button>` : "",
     })}
     <h1 class="large-title">Mes gares</h1>
     ${!apiKey() ? `<p class="notice">Ajoute ta clé API PRIM dans <b>Réglages</b> pour voir les trains.</p>` : ""}
-    <ul class="group" id="fav-list">${cards || `<li class="empty">Aucune gare. Ajoutes-en une puis touche ☆ sur son écran.</li>`}</ul>
+    <ul class="fav-list" id="fav-list">${cards || `<li class="glass empty">Aucune gare. Ajoutes-en une puis touche ☆ sur son écran.</li>`}</ul>
     ${editing ? `<p class="group-footer">Fais glisser ≡ pour changer l'ordre.</p>` : ""}
-    <div class="group">
-      <a class="list-item is-action" href="#/lines"><span class="list-item-name">Ajouter une gare</span><span class="chevron">›</span></a>
-      <a class="list-item is-action" href="#/nearby"><span class="list-item-name">Gares autour de moi</span><span class="chevron">›</span></a>
-    </div>
+    <nav class="toolbar" aria-label="Actions">
+      <a class="toolbar-btn" href="#/lines">${ICONS.plus}<span>Ajouter</span></a>
+      <a class="toolbar-btn" href="#/nearby">${ICONS.locate}<span>Autour de moi</span></a>
+    </nav>
   </div>`;
 
   const list = document.getElementById("fav-list");
@@ -271,7 +283,7 @@ function linePage(lineId) {
   if (!line) return (location.hash = "#/lines");
 
   app.innerHTML = `<div class="page">
-    ${navbar(lineBadge(line), { back: "#/lines", backLabel: "Lignes", right: `<button class="nav-btn" id="near">Proche</button>` })}
+    ${navbar(lineBadge(line), { back: "#/lines", backLabel: "Lignes", right: `<button class="glass-btn round" id="near" aria-label="Trier par distance">${ICONS.locate}</button>` })}
     <div class="search-row" style="margin-top:12px">
       <input class="search" id="search" type="search" placeholder="Rechercher une gare" autocomplete="off">
     </div>
@@ -445,12 +457,12 @@ function boardPage(lineId, stationId) {
 
   Object.assign(board, { line, station, departures: [], messages: [], loaded: false, error: null });
 
-  const star = () => (isFavorite(line.id, station.id) ? "★" : "☆");
+  const star = () => ICONS.star(isFavorite(line.id, station.id));
   app.innerHTML = `<div class="board-page">
     ${navbar(escapeHtml(station.name), {
       back: "#/",
       backLabel: "Mes gares",
-      right: `<button class="nav-btn nav-star" id="star" aria-label="Favori">${star()}</button>`,
+      right: `<button class="glass-btn round nav-star" id="star" aria-label="Favori">${star()}</button>`,
     })}
     <p class="notice" id="board-error" hidden></p>
     <div class="screens" id="screens"></div>
@@ -460,7 +472,7 @@ function boardPage(lineId, stationId) {
 
   document.getElementById("star").addEventListener("click", (e) => {
     toggleFavorite(line.id, station.id);
-    e.currentTarget.textContent = star();
+    e.currentTarget.innerHTML = star();
   });
 
   mountLinePlan(document.getElementById("line-plan"), line, station.id);

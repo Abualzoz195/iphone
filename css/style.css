@@ -65,10 +65,37 @@ button { font: inherit; color: inherit; cursor: pointer; }
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
-/* ---------- 1. Pages : style iOS natif ---------- */
-.page { max-width: 640px; margin: 0 auto; padding-bottom: 40px; }
+/* ---------- 1. Pages : style Liquid Glass (iOS 26 / 27) ---------- */
+/* Fond sombre avec halos de couleur, pour que le verre ait quelque chose à flouter */
+body {
+  background:
+    radial-gradient(60vmax 50vmax at 10% -10%, rgba(80, 120, 255, 0.35), transparent 60%),
+    radial-gradient(50vmax 45vmax at 110% 20%, rgba(190, 80, 220, 0.22), transparent 60%),
+    radial-gradient(60vmax 50vmax at 50% 120%, rgba(0, 170, 160, 0.18), transparent 60%),
+    #06070c;
+  background-attachment: fixed;
+}
 
-/* Barre de navigation (boutons texte, titre centré) */
+/* Matière « verre » : translucide, floutée, liseré lumineux en haut */
+.glass,
+.group,
+.line-tile,
+.search,
+.glass-btn,
+.toolbar,
+.notice {
+  background: rgba(255, 255, 255, 0.08);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  backdrop-filter: blur(28px) saturate(180%);
+  border: 0.5px solid rgba(255, 255, 255, 0.16);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04),
+    0 8px 30px rgba(0, 0, 0, 0.35);
+}
+
+.page { max-width: 640px; margin: 0 auto; padding-bottom: 120px; }
+
 .navbar {
   position: sticky;
   top: 0;
@@ -76,56 +103,62 @@ button { font: inherit; color: inherit; cursor: pointer; }
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  min-height: 44px;
-  padding: 0 8px;
-  background: rgba(0, 0, 0, 0.82);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  backdrop-filter: saturate(180%) blur(20px);
+  gap: 8px;
+  min-height: 60px;
+  padding: 8px 16px;
 }
-.navbar.has-border { border-bottom: 0.5px solid var(--app-line); }
-.nav-left { justify-self: start; display: flex; align-items: center; }
-.nav-right { justify-self: end; display: flex; align-items: center; gap: 4px; }
+.nav-left { justify-self: start; display: flex; align-items: center; gap: 8px; }
+.nav-right { justify-self: end; display: flex; align-items: center; gap: 8px; }
 .nav-title {
   margin: 0;
-  max-width: 60vw;
+  max-width: 55vw;
   font-size: 17px;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
-.nav-btn {
+
+/* Boutons en verre : ronds pour les icônes, en gélule pour le texte */
+.glass-btn {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  padding: 10px 8px;
-  border: 0;
-  background: none;
-  color: var(--accent);
+  justify-content: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 22px;
+  color: var(--app-text);
   font-size: 17px;
+  font-weight: 500;
+  transition: transform 0.15s ease, background 0.15s ease;
 }
-.nav-btn.is-bold { font-weight: 600; }
-.nav-chevron { font-size: 26px; line-height: 0.6; margin-top: -3px; font-weight: 300; }
-.nav-star { font-size: 24px; color: var(--star); }
+.glass-btn.round { width: 44px; padding: 0; }
+.glass-btn:active { transform: scale(0.94); background: rgba(255, 255, 255, 0.16); }
+.glass-btn.is-tinted { background: rgba(10, 132, 255, 0.85); border-color: rgba(255, 255, 255, 0.3); font-weight: 600; }
+.nav-star { color: var(--star); }
 
-.large-title { margin: 4px 16px 14px; font-size: 34px; font-weight: 700; letter-spacing: 0.2px; }
+.large-title { margin: 6px 20px 16px; font-size: 34px; font-weight: 700; letter-spacing: 0.2px; }
 
 .group-label {
-  margin: 22px 32px 7px;
+  margin: 24px 32px 8px;
   font-size: 13px;
-  font-weight: 400;
+  font-weight: 600;
   text-transform: uppercase;
+  letter-spacing: 0.4px;
   color: var(--app-muted);
 }
-.group-footer { margin: 7px 32px 0; color: var(--app-muted); font-size: 13px; line-height: 1.4; }
+.group-footer { margin: 10px 32px 0; color: var(--app-muted); font-size: 13px; line-height: 1.4; }
 
-/* Liste groupée en carte arrondie, séparateurs décalés comme dans Réglages */
+/* Liste en carte de verre, séparateurs décalés */
 .group {
   margin: 0 16px;
   padding: 0;
   list-style: none;
-  border-radius: 12px;
-  background: var(--app-panel);
+  border-radius: 26px;
   overflow: hidden;
 }
 .group + .group { margin-top: 20px; }
@@ -134,30 +167,28 @@ button { font: inherit; color: inherit; cursor: pointer; }
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 52px;
-  padding: 8px 16px;
+  min-height: 54px;
+  padding: 8px 18px;
 }
-.list-item + .list-item::before,
-.fav-card + .fav-card::before {
+.list-item + .list-item::before {
   content: "";
   position: absolute;
   top: 0;
-  left: 16px;
-  right: 0;
-  border-top: 0.5px solid var(--app-line);
+  left: 18px;
+  right: 18px;
+  border-top: 0.5px solid rgba(255, 255, 255, 0.12);
 }
-.list-item:active { background: var(--app-press); }
+.list-item:active { background: rgba(255, 255, 255, 0.08); }
 .list-item-name { flex: 1; min-width: 0; font-size: 17px; }
-.list-item.is-action { color: var(--accent); }
 .distance { color: var(--app-muted); font-size: 15px; }
-.chevron { color: #5a5a5f; font-size: 22px; font-weight: 300; }
+.chevron { color: rgba(255, 255, 255, 0.35); font-size: 22px; font-weight: 300; }
 
-.empty { margin: 0; padding: 14px 16px; color: var(--app-muted); font-size: 15px; line-height: 1.4; }
+.empty { margin: 0; padding: 16px 18px; color: var(--app-muted); font-size: 15px; line-height: 1.4; list-style: none; }
+.glass.empty { border-radius: 26px; }
 .notice {
   margin: 0 16px 16px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: var(--app-panel);
+  padding: 14px 16px;
+  border-radius: 22px;
   color: var(--app-text);
   font-size: 15px;
   line-height: 1.35;
@@ -167,46 +198,73 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .line-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-  gap: 8px;
+  gap: 10px;
   margin: 0 16px;
 }
 .line-tile {
   display: grid;
   place-items: center;
-  padding: 12px 4px;
-  border-radius: 12px;
-  background: var(--app-panel);
+  padding: 14px 4px;
+  border-radius: 22px;
+  transition: transform 0.15s ease;
 }
-.line-tile:active { background: var(--app-press); }
+.line-tile:active { transform: scale(0.95); }
 
 .search-row { display: flex; gap: 8px; margin: 4px 16px 16px; }
 .search {
   flex: 1;
   min-width: 0;
-  padding: 8px 12px;
-  border: 0;
-  border-radius: 10px;
-  background: #1c1c1e;
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 22px;
   color: var(--app-text);
   font: inherit;
   font-size: 17px; /* 16 px minimum : évite le zoom automatique de Safari */
 }
 .search::placeholder { color: var(--app-muted); }
 
-/* ---------- Favoris avec aperçu des prochains trains ---------- */
-.fav-card { position: relative; }
-.fav-link { display: block; padding: 12px 16px 14px; }
-.fav-link:active { background: var(--app-press); }
-.fav-head { display: flex; align-items: center; gap: 12px; }
+/* Barre d'outils flottante en bas (comme les apps iOS 26 / 27) */
+.toolbar {
+  position: fixed;
+  left: 50%;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  z-index: 4;
+  display: flex;
+  gap: 4px;
+  padding: 5px;
+  border-radius: 30px;
+  transform: translateX(-50%);
+}
+.toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 46px;
+  padding: 0 18px;
+  border-radius: 23px;
+  font-size: 16px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+.toolbar-btn:active { background: rgba(255, 255, 255, 0.14); }
+.toolbar-btn svg { width: 20px; height: 20px; }
+
+/* ---------- Favoris : une carte de verre par gare, avec aperçu ---------- */
+.fav-list { display: grid; gap: 12px; margin: 0 16px; padding: 0; list-style: none; }
+.fav-card { position: relative; border-radius: 26px; overflow: hidden; }
+.fav-link { display: block; padding: 14px 16px 16px; }
+.fav-link:active { background: rgba(255, 255, 255, 0.06); }
+.fav-head { display: flex; align-items: center; gap: 12px; padding: 0 2px; }
 .fav-name { flex: 1; min-width: 0; font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.fav-card.is-editing { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+.fav-card.is-editing { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
 .fav-delete {
   flex: none;
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: 0;
   border-radius: 50%;
@@ -218,19 +276,19 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .drag-handle {
   flex: none;
-  padding: 6px 2px 6px 12px;
-  color: #6e6e73;
+  padding: 8px 2px 8px 14px;
+  color: rgba(255, 255, 255, 0.45);
   font-size: 22px;
   line-height: 1;
   touch-action: none; /* le doigt déplace la gare au lieu de faire défiler */
   cursor: grab;
 }
-.fav-card.dragging { background: #2c2c2e; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5); z-index: 2; }
+.fav-card.dragging { transform: scale(1.03); background: rgba(255, 255, 255, 0.16); z-index: 2; }
 
 /* Mini écran : une ligne par direction, dans le style des écrans de quai */
 .preview {
-  margin-top: 10px;
-  border-radius: 6px;
+  margin-top: 12px;
+  border-radius: 14px;
   overflow: hidden;
   font-family: var(--font);
 }
@@ -325,7 +383,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 /* ---------- Écran de quai : cadre commun ---------- */
 .board-page { background: #050505; }
-.board-page .navbar { background: rgba(5, 5, 5, 0.85); }
+.board-page .navbar { background: linear-gradient(#050505 60%, rgba(5, 5, 5, 0)); }
 
 .screens {
   display: grid;
@@ -629,3 +687,5 @@ body:has(.board-page) { background: #050505; }
 }
 .plan-svg { display: block; }
 .plan-svg a { cursor: pointer; }
+/* La barre flottante passe au-dessus du contenu : verre plus dense pour rester lisible */
+.toolbar { background: rgba(28, 28, 34, 0.62); -webkit-backdrop-filter: blur(30px) saturate(200%); backdrop-filter: blur(30px) saturate(200%); }
