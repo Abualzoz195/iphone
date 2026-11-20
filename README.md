@@ -72,12 +72,13 @@ une ligne (1 requête Navitia), puis gardés sur le téléphone.
 
 ## Publier une mise à jour
 
-Avant chaque commit qui modifie l'app, change le numéro de version :
-```
-python3 tools/bump_version.py
-```
-Ça ajoute `?v=…` aux fichiers pour que l'iPhone retélécharge la nouvelle version au lieu
-de garder l'ancienne en cache. La version installée s'affiche en bas de **Réglages**.
+Il suffit de pousser sur GitHub. Le service worker (`sw.js`) sert l'app depuis le téléphone
+(lancement instantané, hors connexion) et revérifie chaque fichier en arrière-plan : quand
+quelque chose a changé, un bandeau « Nouvelle version disponible · Recharger » apparaît.
+La date de publication s'affiche en bas de **Réglages**.
+
+Un nouveau fichier JS doit être ajouté à `APP_FILES` dans `sw.js` pour être disponible
+hors connexion dès l'installation (sinon il est gardé à sa première utilisation).
 
 ## Tester sur ordinateur
 

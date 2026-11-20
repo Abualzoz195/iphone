@@ -1,12 +1,12 @@
 // Navigation de l'app : accueil (favoris) → ligne → gare → écran de quai.
 // Les pages sont repérées par l'adresse après « # » (ex. #/board/RER_B/474151).
-import { NETWORK } from "./network.js?v=20261120-1609";
-import { DEFAULT_FAVORITES, DEFAULT_MESSAGE, SETTINGS } from "./config.js?v=20261120-1609";
-import { fetchDepartures, fetchMessages, PrimError, usageStats, DAILY_QUOTA } from "./prim.js?v=20261120-1609";
-import { rerScreen, metroScreen, lineBadge, escapeHtml, destinationHtml } from "./screens.js?v=20261120-1609";
-import { mountLinePlan } from "./lineplan.js?v=20261120-1609";
-import { openTripDialog, tripCardHtml, loadTrip, endTrip } from "./trip.js?v=20261120-1609";
-import { BUS_LINES, ensureBusStops, hasBusStops, nearbyBusStops, rememberStop } from "./bus.js?v=20261120-1609";
+import { NETWORK } from "./network.js";
+import { DEFAULT_FAVORITES, DEFAULT_MESSAGE, SETTINGS } from "./config.js";
+import { fetchDepartures, fetchMessages, PrimError, usageStats, DAILY_QUOTA } from "./prim.js";
+import { rerScreen, metroScreen, lineBadge, escapeHtml, destinationHtml } from "./screens.js";
+import { mountLinePlan } from "./lineplan.js";
+import { openTripDialog, tripCardHtml, loadTrip, endTrip } from "./trip.js";
+import { BUS_LINES, ensureBusStops, hasBusStops, nearbyBusStops, rememberStop } from "./bus.js";
 
 const app = document.getElementById("app");
 
@@ -594,7 +594,7 @@ function startBoard() {
   loadDepartures();
   loadMessages();
   board.timers.push(
-    setInterval(drawBoard, 1000), // horloge et compte à rebours
+    setInterval(drawBoard, 5000), // horloge et compte à rebours (les « : » clignotent en CSS)
     setInterval(loadDepartures, SETTINGS.departuresRefreshSeconds * 1000),
     setInterval(loadMessages, SETTINGS.messagesRefreshSeconds * 1000),
   );
@@ -640,8 +640,7 @@ app.addEventListener("click", (e) => {
   }
   if (e.target.closest("[data-action=settings]")) {
     document.getElementById("api-key").value = apiKey();
-    document.getElementById("app-version").textContent =
-      document.querySelector('meta[name="app-version"]')?.content || "inconnue";
+    showVersion();
     dialog.showModal();
   }
 });
@@ -755,3 +754,39 @@ function drawHud() {
 }
 drawHud();
 setInterval(drawHud, 2000);
+
+// ---------- Version, hors connexion et mises à jour (service worker) ----------
+// La version affichée est la date de publication de la page sur GitHub Pages :
+// plus besoin de numéro de version à changer à la main.
+async function showVersion() {
+  const el = document.getElementById("app-version");
+  try {
+    const response = await fetch("index.html", { method: "HEAD", cache: "no-store" });
+    const date = new Date(response.headers.get("last-modified"));
+    el.textContent = isNaN(date)
+      ? "inconnue"
+      : date.toLocaleString("fr-FR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  } catch {
+    el.textContent = "inconnue (hors connexion)";
+  }
+  document.getElementById("offline-status").textContent = navigator.serviceWorker?.controller
+    ? "disponible hors connexion"
+    : "pas encore disponible hors connexion";
+}
+
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker
+    .register("sw.js")
+    .then((registration) => registration.update()) // vérifie à chaque lancement si sw.js a changé
+    .catch(() => { /* navigation privée ou navigateur sans service worker */ });
+
+  navigator.serviceWorker.addEventListener("message", (event) => {
+    if (event.data?.type !== "update-available" || document.querySelector(".update-toast")) return;
+    const toast = document.createElement("button");
+    toast.type = "button";
+    toast.className = "update-toast";
+    toast.innerHTML = "Nouvelle version disponible · <b>Recharger</b>";
+    toast.addEventListener("click", () => location.reload());
+    document.body.appendChild(toast);
+  });
+}

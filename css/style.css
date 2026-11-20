@@ -7,6 +7,13 @@
    Les tailles des écrans sont en « cqw » (1 % de la largeur de l'écran)
    pour garder les proportions d'un vrai écran sur téléphone comme sur PC.
    ========================================================== */
+/* Police des écrans de quai, hébergée dans l'app (plus de requête vers Google, marche hors connexion).
+   Fira Sans, licence SIL Open Font License (fonts/LICENSE-OFL.txt). */
+@font-face { font-family: "Fira Sans"; font-style: normal; font-weight: 400; font-display: swap; src: url("../fonts/fira-sans-400.woff2") format("woff2"); }
+@font-face { font-family: "Fira Sans"; font-style: normal; font-weight: 500; font-display: swap; src: url("../fonts/fira-sans-500.woff2") format("woff2"); }
+@font-face { font-family: "Fira Sans"; font-style: normal; font-weight: 600; font-display: swap; src: url("../fonts/fira-sans-600.woff2") format("woff2"); }
+@font-face { font-family: "Fira Sans"; font-style: normal; font-weight: 700; font-display: swap; src: url("../fonts/fira-sans-700.woff2") format("woff2"); }
+
 :root {
   /* Pages de l'app : palette sombre d'iOS */
   --app-bg: #000000;
@@ -888,3 +895,23 @@ body:has(.board-page) { background: #050505; }
 /* Recherche de lignes de bus */
 .search-row.bus-search { margin-top: 0 !important; }
 .bus-network { color: var(--app-muted); font-size: 0.88rem; }
+
+/* Bandeau « Nouvelle version disponible » (service worker) */
+.update-toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(84px + env(safe-area-inset-bottom));
+  z-index: 20;
+  transform: translateX(-50%);
+  padding: 10px 18px;
+  border: 0.5px solid rgba(255, 255, 255, 0.2);
+  border-radius: 22px;
+  background: rgba(40, 40, 46, 0.92);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  color: #fff;
+  font-size: 0.88rem;
+  white-space: nowrap;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+.update-toast b { color: var(--accent); }

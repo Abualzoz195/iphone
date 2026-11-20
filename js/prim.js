@@ -203,7 +203,20 @@ export function parseVisits(visits) {
 }
 
 // Messages d'info trafic (travaux, perturbations) d'une ligne.
-export async function fetchMessages(lineRef, apiKey) {
+// Info trafic : une ligne n'est redemandée qu'après 5 min, même en passant d'une gare à l'autre.
+const MESSAGES_CACHE_MS = 5 * 60000;
+const messagesCache = new Map(); // ligne → { at, promise }
+
+export function fetchMessages(lineRef, apiKey) {
+  const hit = messagesCache.get(lineRef);
+  if (hit && Date.now() - hit.at < MESSAGES_CACHE_MS) return hit.promise;
+  const promise = loadMessages(lineRef, apiKey);
+  messagesCache.set(lineRef, { at: Date.now(), promise });
+  promise.catch(() => messagesCache.delete(lineRef));
+  return promise;
+}
+
+async function loadMessages(lineRef, apiKey) {
   const data = await primGet("/general-message", { LineRef: lineRef }, apiKey);
   const infos = data?.Siri?.ServiceDelivery?.GeneralMessageDelivery?.[0]?.InfoMessage ?? [];
   const now = Date.now();

@@ -1,7 +1,7 @@
 // Bus : la liste des lignes est dans l'app (buslines.js), les arrêts sont téléchargés
 // à la demande (1 requête Navitia par ligne, une seule fois) puis gardés sur le téléphone.
-import { BUS_ROWS, NETWORKS } from "./buslines.js?v=20261120-1609";
-import { fetchNavitia } from "./prim.js?v=20261120-1609";
+import { BUS_ROWS, NETWORKS } from "./buslines.js";
+import { fetchNavitia } from "./prim.js";
 
 const CACHE_PREFIX = "busStops:";
 const EXTRA_KEY = "busExtraStops"; // arrêts vus via « Autour de moi » (identifiant parfois différent)

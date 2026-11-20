@@ -8,10 +8,10 @@
 //    Ailleurs, on prend l'horaire prévu + le retard constaté.
 // 3. Position : le train est « à quai à X » ou « entre X et Y » selon l'heure estimée à chaque gare.
 // Sans liste d'arrêts (train inconnu de Navitia), on se contente du départ et de l'arrivée.
-import { NETWORK } from "./network.js?v=20261120-1609";
-import { fetchDepartures, fetchTrainStops } from "./prim.js?v=20261120-1609";
-import { lineBadge, escapeHtml, hhmm } from "./screens.js?v=20261120-1609";
-import { DESTINATION_ALIASES } from "./config.js?v=20261120-1609";
+import { NETWORK } from "./network.js";
+import { fetchDepartures, fetchTrainStops } from "./prim.js";
+import { lineBadge, escapeHtml, hhmm } from "./screens.js";
+import { DESTINATION_ALIASES } from "./config.js";
 
 const shortName = (name) => DESTINATION_ALIASES[name] ?? name;
 
