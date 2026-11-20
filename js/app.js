@@ -1,12 +1,12 @@
 // Navigation de l'app : accueil (favoris) → ligne → gare → écran de quai.
 // Les pages sont repérées par l'adresse après « # » (ex. #/board/RER_B/474151).
-import { NETWORK } from "./network.js?v=20261120-1548";
-import { DEFAULT_FAVORITES, DEFAULT_MESSAGE, SETTINGS } from "./config.js?v=20261120-1548";
-import { fetchDepartures, fetchMessages, PrimError, usageStats, DAILY_QUOTA } from "./prim.js?v=20261120-1548";
-import { rerScreen, metroScreen, lineBadge, escapeHtml, destinationHtml } from "./screens.js?v=20261120-1548";
-import { mountLinePlan } from "./lineplan.js?v=20261120-1548";
-import { openTripDialog, tripCardHtml, loadTrip, endTrip } from "./trip.js?v=20261120-1548";
-import { BUS_LINES, ensureBusStops, hasBusStops, nearbyBusStops } from "./bus.js?v=20261120-1548";
+import { NETWORK } from "./network.js?v=20261120-1557";
+import { DEFAULT_FAVORITES, DEFAULT_MESSAGE, SETTINGS } from "./config.js?v=20261120-1557";
+import { fetchDepartures, fetchMessages, PrimError, usageStats, DAILY_QUOTA } from "./prim.js?v=20261120-1557";
+import { rerScreen, metroScreen, lineBadge, escapeHtml, destinationHtml } from "./screens.js?v=20261120-1557";
+import { mountLinePlan } from "./lineplan.js?v=20261120-1557";
+import { openTripDialog, tripCardHtml, loadTrip, endTrip } from "./trip.js?v=20261120-1557";
+import { BUS_LINES, ensureBusStops, hasBusStops, nearbyBusStops, rememberStop } from "./bus.js?v=20261120-1557";
 
 const app = document.getElementById("app");
 
@@ -657,7 +657,20 @@ route();
 const favsStatus = (text) => (document.getElementById("favs-status").textContent = text);
 
 document.getElementById("export-favs").addEventListener("click", async () => {
-  const data = { app: "prochains-trains", format: 1, exportedAt: new Date().toISOString(), favorites: favorites() };
+  // Pour les bus, on joint l'arrêt (nom, position) : sur un autre téléphone, un arrêt trouvé via
+  // « Autour de moi » n'est pas forcément dans la liste officielle de la ligne.
+  const withStops = favorites().map((f) => {
+    const line = lineById(f.lineId);
+    const station = line?.mode === "BUS" ? stationOf(line, f.stationId) : null;
+    return station ? { ...f, station } : f;
+  });
+  const data = {
+    app: "prochains-trains",
+    format: 2,
+    exportedAt: new Date().toISOString(),
+    favorites: withStops,
+    expandedPreviews: expandedKeys(), // aperçus dépliés
+  };
   const name = `mes-gares-${new Date().toISOString().slice(0, 10)}.json`;
   const file = new File([JSON.stringify(data, null, 2)], name, { type: "application/json" });
   try {
@@ -692,6 +705,10 @@ document.getElementById("import-file").addEventListener("change", async (e) => {
     const valid = list.filter((f) => {
       const key = `${f?.lineId}/${f?.stationId}`;
       const line = lineById(f?.lineId);
+      // Arrêt de bus joint au fichier : on le mémorise pour pouvoir l'afficher tout de suite
+      if (line?.mode === "BUS" && f.station?.id === String(f.stationId) && f.station.name) {
+        rememberStop(line.id, { id: f.station.id, name: f.station.name, lat: +f.station.lat || 0, lon: +f.station.lon || 0 });
+      }
       const known = stationOf(line, f?.stationId) || (line?.mode === "BUS" && /^\d+$/.test(String(f?.stationId)));
       if (seen.has(key) || !known) return false;
       seen.add(key);
@@ -700,6 +717,13 @@ document.getElementById("import-file").addEventListener("change", async (e) => {
     if (!valid.length) throw new Error("aucune gare reconnue dans ce fichier");
     if (!confirm(`Remplacer tes ${favorites().length} gare(s) par les ${valid.length} du fichier ?`)) return;
     store.set("favorites", valid);
+    // Aperçus dépliés (fichiers récents) ; sinon, par défaut le premier seulement
+    if (Array.isArray(data.expandedPreviews)) {
+      const keys = new Set(valid.map((f) => `${f.lineId}/${f.stationId}`));
+      store.set("expandedPreviews", data.expandedPreviews.filter((k) => keys.has(k)));
+    } else {
+      store.set("expandedPreviews", null);
+    }
     const skipped = list.length - valid.length;
     favsStatus(`${valid.length} gare(s) importée(s)${skipped ? `, ${skipped} ignorée(s)` : ""}.`);
     route();
