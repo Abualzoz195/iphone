@@ -3,10 +3,10 @@
 // dans les prochains passages de la gare d'arrivée. Trajet = arrivée là-bas − départ ici.
 // S'il n'y figure pas, c'est qu'il ne s'y arrête pas (mission directe, autre branche)
 // ou que son passage n'est pas encore annoncé (l'API voit environ 3 h à l'avance).
-import { NETWORK } from "./network.js?v=20261120-1258";
-import { fetchDepartures } from "./prim.js?v=20261120-1258";
-import { lineBadge, escapeHtml, hhmm } from "./screens.js?v=20261120-1258";
-import { DESTINATION_ALIASES } from "./config.js?v=20261120-1258";
+import { NETWORK } from "./network.js?v=20261120-1309";
+import { fetchDepartures } from "./prim.js?v=20261120-1309";
+import { lineBadge, escapeHtml, hhmm } from "./screens.js?v=20261120-1309";
+import { DESTINATION_ALIASES } from "./config.js?v=20261120-1309";
 
 const shortName = (name) => DESTINATION_ALIASES[name] ?? name;
 

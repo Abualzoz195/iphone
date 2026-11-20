@@ -719,7 +719,8 @@ body:has(.board-page) { background: #050505; }
 .rer-screen .rer-row[data-train] { cursor: pointer; }
 .rer-screen .rer-row[data-train]:active { filter: brightness(0.92); }
 
-.trip-dialog { max-height: 80vh; display: flex; flex-direction: column; }
+/* display: flex seulement quand la fenêtre est ouverte, sinon elle resterait visible une fois fermée */
+.trip-dialog { max-height: 80vh; flex-direction: column; }
 .trip-dialog[open] { display: flex; }
 .trip-dialog .search { width: 100%; margin: 4px 0 10px; }
 .trip-train-info { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 12px; color: var(--app-muted); font-size: 0.88rem; }
