@@ -58,10 +58,21 @@ export async function fetchTrainStops(trainId, apiKey) {
 }
 
 // Prochains passages d'une ligne à un arrêt.
-export async function fetchDepartures(monitoringRef, lineRef, apiKey) {
-  const data = await primGet("/stop-monitoring", { MonitoringRef: monitoringRef, LineRef: lineRef }, apiKey);
-  const visits = data?.Siri?.ServiceDelivery?.StopMonitoringDelivery?.[0]?.MonitoredStopVisit ?? [];
-  return parseVisits(visits);
+// Petit cache pour économiser le quota (1 000 requêtes/jour) : une même gare demandée deux fois
+// en même temps ou à moins de 20 s d'intervalle (aperçu + trajet, par ex.) = une seule requête.
+const CACHE_MS = 20000;
+const departuresCache = new Map(); // "arrêt|ligne" → { at, promise }
+
+export function fetchDepartures(monitoringRef, lineRef, apiKey) {
+  const key = `${monitoringRef}|${lineRef}`;
+  const hit = departuresCache.get(key);
+  if (hit && Date.now() - hit.at < CACHE_MS) return hit.promise;
+  const promise = primGet("/stop-monitoring", { MonitoringRef: monitoringRef, LineRef: lineRef }, apiKey).then((data) =>
+    parseVisits(data?.Siri?.ServiceDelivery?.StopMonitoringDelivery?.[0]?.MonitoredStopVisit ?? []),
+  );
+  departuresCache.set(key, { at: Date.now(), promise });
+  promise.catch(() => departuresCache.delete(key)); // une erreur n'est pas gardée en cache
+  return promise;
 }
 
 // Nom de la mission tel qu'affiché en gare : « ERIC53 » si dispo, sinon le code « ROPE ».

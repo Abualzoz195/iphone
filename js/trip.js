@@ -3,14 +3,15 @@
 // 1. Arrêts du train : on récupère la liste ordonnée des arrêts de CE train (Navitia, horaires
 //    prévus, gares sans arrêt signalées). La fenêtre ne propose que les gares où il s'arrête.
 // 2. Temps réel : on cherche ce même train (identifiant, ou nom comme « ERIO55 ») dans les
-//    prochains passages des gares utiles (départ, deux prochaines gares, arrivée).
+//    prochains passages de deux gares seulement (ta gare avant le départ, puis la prochaine
+//    gare du train ; et ta destination).
 //    Ailleurs, on prend l'horaire prévu + le retard constaté.
 // 3. Position : le train est « à quai à X » ou « entre X et Y » selon l'heure estimée à chaque gare.
 // Sans liste d'arrêts (train inconnu de Navitia), on se contente du départ et de l'arrivée.
-import { NETWORK } from "./network.js?v=20261120-1404";
-import { fetchDepartures, fetchTrainStops } from "./prim.js?v=20261120-1404";
-import { lineBadge, escapeHtml, hhmm } from "./screens.js?v=20261120-1404";
-import { DESTINATION_ALIASES } from "./config.js?v=20261120-1404";
+import { NETWORK } from "./network.js?v=20261120-1512";
+import { fetchDepartures, fetchTrainStops } from "./prim.js?v=20261120-1512";
+import { lineBadge, escapeHtml, hhmm } from "./screens.js?v=20261120-1512";
+import { DESTINATION_ALIASES } from "./config.js?v=20261120-1512";
 
 const shortName = (name) => DESTINATION_ALIASES[name] ?? name;
 
@@ -239,37 +240,40 @@ export async function loadTrip(apiKey) {
       if (raw) trip.stops = servedStops(raw, trip.departure);
     }
 
-    // Avant le départ : l'heure de départ et la voie peuvent bouger
-    if (now - trip.departure < 2 * 60000) {
-      const here = await lookup(trip.fromId);
-      if (here) {
-        trip.departure = here.expected;
-        trip.platform = here.platform || trip.platform;
-        const planned = trip.stops?.find((s) => s.id === trip.fromId);
-        if (planned) trip.delay = here.expected - planned.departure;
+    // Deux gares interrogées par mise à jour (le reste = horaire prévu + retard constaté) :
+    //   avant le départ → ta gare (départ, voie) + ta destination
+    //   après le départ → la prochaine gare du train + ta destination
+    // Si c'est la même gare, une seule requête (cache de fetchDepartures).
+    const departed = now >= trip.departure;
+    const nextStop = departed ? trainPosition(trip, now)?.upcoming[0] : null;
+    const [here, next, there] = await Promise.all([
+      departed ? null : lookup(trip.fromId),
+      nextStop && nextStop.id !== trip.toId ? lookup(nextStop.id) : null,
+      lookup(trip.toId),
+    ]);
+
+    if (here) {
+      trip.departure = here.expected;
+      trip.platform = here.platform || trip.platform;
+      const planned = trip.stops?.find((s) => s.id === trip.fromId);
+      if (planned) {
+        planned.live = here.arrival;
+        trip.delay = here.expected - planned.departure;
       }
     }
-
-    // Les deux prochaines gares du train : heure d'arrivée en temps réel
-    const pos = trainPosition(trip, now);
-    for (const stop of pos?.upcoming ?? []) {
-      const live = await lookup(stop.id);
-      const target = trip.stops.find((s) => s.id === stop.id);
-      if (live && target) {
-        target.live = live.arrival;
-        trip.delay = live.arrival - target.arrival; // dernier retard constaté
+    if (next) {
+      const target = trip.stops.find((s) => s.id === nextStop.id);
+      if (target) {
+        target.live = next.arrival;
+        trip.delay = next.arrival - target.arrival; // dernier retard constaté
       }
     }
-
-    // Gare d'arrivée
-    const there = await lookup(trip.toId);
+    const destination = trip.stops?.find((s) => s.id === trip.toId);
     if (there) {
       trip.arrival = there.arrival;
-      const target = trip.stops?.find((s) => s.id === trip.toId);
-      if (target) target.live = there.arrival;
-    } else if (trip.stops) {
-      const target = trip.stops.find((s) => s.id === trip.toId);
-      if (target) trip.arrival = estimate(target, trip.delay ?? 0);
+      if (destination) destination.live = there.arrival;
+    } else if (destination) {
+      trip.arrival = estimate(destination, trip.delay ?? 0);
     }
 
     if (getTrip()?.id !== trip.id) return; // trajet terminé entre-temps
