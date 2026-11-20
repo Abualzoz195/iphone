@@ -262,8 +262,8 @@ function header(container, w, compact) {
 function waitBox(stack, d, size = 13) {
   const box = stack.addStack();
   box.backgroundColor = COLORS.waitBg;
-  box.cornerRadius = 3;
-  box.setPadding(2, 5, 2, 5);
+  box.cornerRadius = size > 16 ? 5 : 3;
+  box.setPadding(size > 16 ? 3 : 2, size > 16 ? 7 : 5, size > 16 ? 3 : 2, size > 16 ? 7 : 5);
   label(box, d.cancelled ? "Supp." : hhmm(d.expected), size, d.cancelled ? COLORS.red : COLORS.wait, "mono");
 }
 
@@ -328,10 +328,25 @@ function directionColumns(container, groups, rowsPerDirection) {
 }
 
 // Directions l'une sous l'autre (petit widget, grand widget avec une gare)
+// Petit widget : le prochain train de la direction (un train supprimé ne prend pas la place),
+// avec l'heure en grand
+function bigRow(container, deps) {
+  const d = deps.find((x) => !x.cancelled) || deps[0];
+  const row = container.addStack();
+  row.backgroundColor = COLORS.row;
+  row.setPadding(5, 8, 5, 6);
+  row.centerAlignContent();
+  const dest = label(row, d.destination, 11, COLORS.ink, "semibold");
+  dest.minimumScaleFactor = 0.6;
+  row.addSpacer(4);
+  row.addSpacer();
+  waitBox(row, d, 20);
+}
+
 function directionStack(container, groups, rowsPerDirection, compact) {
   groups.forEach((deps) => {
     directionTitleRow(container, deps, compact);
-    if (compact) narrowRows(container, deps, rowsPerDirection, true);
+    if (compact) bigRow(container, deps);
     else rerRows(container, deps, rowsPerDirection, false);
   });
 }
@@ -368,11 +383,20 @@ function metroRows(container, groups, maxGroups, compact) {
   body.backgroundColor = COLORS.metroBody;
   body.setPadding(compact ? 6 : 10, 10, 6, 10);
   groups.slice(0, maxGroups).forEach((deps, i) => {
-    if (i) body.addSpacer(compact ? 5 : 12);
+    if (i) body.addSpacer(compact ? 6 : 12);
     const next = deps.filter((d) => !d.cancelled);
+    if (compact) {
+      // Petit widget : la destination sur une ligne, le prochain passage en grand dessous
+      const dest = label(body, `→ ${next[0] ? next[0].destination : deps[0].destination}`, 10, COLORS.metroText, "semibold");
+      dest.minimumScaleFactor = 0.7;
+      const row = body.addStack();
+      row.addSpacer();
+      label(row, next[0] ? hhmm(next[0].expected) : "--:--", 22, COLORS.wait, "mono");
+      return;
+    }
     const row = body.addStack();
     row.centerAlignContent();
-    const dest = label(row, `→ ${next[0] ? next[0].destination : deps[0].destination}`, compact ? 11 : 14, COLORS.metroText, "semibold");
+    const dest = label(row, `→ ${next[0] ? next[0].destination : deps[0].destination}`, 14, COLORS.metroText, "semibold");
     dest.minimumScaleFactor = 0.75;
     row.addSpacer();
     next.slice(0, compact ? 1 : 2).forEach((d, j) => {
@@ -448,7 +472,7 @@ async function buildWidget(family, parameter, apiKey) {
   // Nombre de trains par gare selon la taille du widget et le nombre de gares
   // Disposition et nombre de trains par direction selon la taille du widget
   const layout = family === "small" || (family === "large" && favs.length === 1) ? "stack" : "columns";
-  const rows = family === "small" ? 2 : family === "medium" ? 3 : [4, 3, 2][favs.length - 1];
+  const rows = family === "small" ? 1 : family === "medium" ? 3 : [4, 3, 2][favs.length - 1];
   for (const [i, fav] of favs.entries()) {
     if (i) widget.addSpacer(6);
     try {
