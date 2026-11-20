@@ -1,10 +1,10 @@
 // Navigation de l'app : accueil (favoris) → ligne → gare → écran de quai.
 // Les pages sont repérées par l'adresse après « # » (ex. #/board/RER_B/474151).
-import { NETWORK } from "./network.js";
-import { DEFAULT_FAVORITES, DEFAULT_MESSAGE, SETTINGS } from "./config.js";
-import { fetchDepartures, fetchMessages, PrimError } from "./prim.js";
-import { rerScreen, metroScreen, lineBadge, escapeHtml, destinationHtml } from "./screens.js";
-import { mountLinePlan } from "./lineplan.js";
+import { NETWORK } from "./network.js?v=20261120-1200";
+import { DEFAULT_FAVORITES, DEFAULT_MESSAGE, SETTINGS } from "./config.js?v=20261120-1200";
+import { fetchDepartures, fetchMessages, PrimError } from "./prim.js?v=20261120-1200";
+import { rerScreen, metroScreen, lineBadge, escapeHtml, destinationHtml } from "./screens.js?v=20261120-1200";
+import { mountLinePlan } from "./lineplan.js?v=20261120-1200";
 
 const app = document.getElementById("app");
 
@@ -525,6 +525,8 @@ app.addEventListener("click", (e) => {
   }
   if (e.target.closest("[data-action=settings]")) {
     document.getElementById("api-key").value = apiKey();
+    document.getElementById("app-version").textContent =
+      document.querySelector('meta[name="app-version"]')?.content || "inconnue";
     dialog.showModal();
   }
 });
@@ -535,3 +537,56 @@ dialog.addEventListener("close", () => {
 });
 
 route();
+
+// ---------- Export / import des favoris ----------
+const favsStatus = (text) => (document.getElementById("favs-status").textContent = text);
+
+document.getElementById("export-favs").addEventListener("click", async () => {
+  const data = { app: "prochains-trains", format: 1, exportedAt: new Date().toISOString(), favorites: favorites() };
+  const name = `mes-gares-${new Date().toISOString().slice(0, 10)}.json`;
+  const file = new File([JSON.stringify(data, null, 2)], name, { type: "application/json" });
+  try {
+    // Sur iPhone : feuille de partage (Fichiers, AirDrop, Messages…)
+    if (navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file], title: "Mes gares" });
+    } else {
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(file);
+      link.download = name;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+    }
+    favsStatus(`${data.favorites.length} gare(s) exportée(s).`);
+  } catch (err) {
+    if (err.name !== "AbortError") favsStatus("Export impossible : " + err.message);
+  }
+});
+
+document.getElementById("import-favs").addEventListener("click", () => document.getElementById("import-file").click());
+
+document.getElementById("import-file").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  e.target.value = ""; // permet de réimporter le même fichier
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    const list = Array.isArray(data) ? data : data.favorites;
+    if (!Array.isArray(list)) throw new Error("ce fichier ne contient pas de gares");
+    // On ne garde que les gares qui existent dans l'app, sans doublon
+    const seen = new Set();
+    const valid = list.filter((f) => {
+      const key = `${f?.lineId}/${f?.stationId}`;
+      if (seen.has(key) || !stationOf(lineById(f?.lineId), f?.stationId)) return false;
+      seen.add(key);
+      return true;
+    }).map(({ lineId, stationId }) => ({ lineId, stationId }));
+    if (!valid.length) throw new Error("aucune gare reconnue dans ce fichier");
+    if (!confirm(`Remplacer tes ${favorites().length} gare(s) par les ${valid.length} du fichier ?`)) return;
+    store.set("favorites", valid);
+    const skipped = list.length - valid.length;
+    favsStatus(`${valid.length} gare(s) importée(s)${skipped ? `, ${skipped} ignorée(s)` : ""}.`);
+    route();
+  } catch (err) {
+    favsStatus("Import impossible : " + err.message);
+  }
+});

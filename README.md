@@ -65,6 +65,15 @@ est prolongée ou une gare ouverte :
 PRIM_API_KEY=ta_cle python3 tools/build_network.py
 ```
 
+## Publier une mise à jour
+
+Avant chaque commit qui modifie l'app, change le numéro de version :
+```
+python3 tools/bump_version.py
+```
+Ça ajoute `?v=…` aux fichiers pour que l'iPhone retélécharge la nouvelle version au lieu
+de garder l'ancienne en cache. La version installée s'affiche en bas de **Réglages**.
+
 ## Tester sur ordinateur
 
 ```

@@ -699,3 +699,18 @@ body:has(.board-page) { background: #050505; }
 @media (prefers-reduced-motion: reduce) {
   .glass-btn, .glass-btn:active { transition: none; transform: none; }
 }
+
+/* Réglages : section Mes gares */
+.dialog-section { margin: 20px 0 8px; font-size: 1rem; font-weight: 600; }
+.dialog-row { display: flex; gap: 10px; }
+.dialog-row button {
+  flex: 1;
+  padding: 10px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--app-text);
+  font-weight: 600;
+}
+.dialog-row button:active { background: rgba(255, 255, 255, 0.2); }
+.hint.version { margin-top: 16px; font-size: 12px; opacity: 0.7; }
