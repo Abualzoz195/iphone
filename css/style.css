@@ -15,19 +15,19 @@
   --app-muted: #a9b3e0;
   --accent: #ffd23f;
 
-  /* Écran RER */
-  --rer-head: #dde2fb;
-  --rer-bg: #c4ccf3;
-  --rer-sep: #a3afe6;
+  /* Écran RER (fond blanc, texte bleu foncé) */
+  --rer-head: #ffffff;
+  --rer-bg: #ffffff;
+  --rer-sep: #c9cdd8;
   --rer-ink: #1b2a87;
   --rer-mission: #2635aa;
 
-  /* Écran métro */
-  --metro-blue: #4f6ff8;
-  --metro-stripe: #2a2fd8;
-  --metro-ink: #0a1170;
-  --metro-body: #070a1c;
-  --metro-label: #93a4ff;
+  /* Écran métro (bandeaux blancs, corps noir) */
+  --metro-blue: #ffffff;
+  --metro-stripe: #1b2a87;
+  --metro-ink: #1b2a87;
+  --metro-body: #000000;
+  --metro-label: #e6e8ef;
 
   /* Communs */
   --wait-bg: #0d0d10;
@@ -274,6 +274,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
   padding: 2cqw 3cqw;
   background: var(--rer-head);
   color: var(--rer-ink);
+  border-top: 0.35cqw solid var(--rer-sep);
 }
 .info-side { display: flex; flex-direction: column; align-items: center; gap: 1.2cqw; }
 .info-icon {
