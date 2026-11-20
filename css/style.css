@@ -17,7 +17,7 @@
 
   /* Écran RER (fond blanc, texte bleu foncé) */
   --rer-head: #ffffff;
-  --rer-bg: #ffffff;
+  --rer-bg: #e2e6f3; /* lignes de trains : gris bleuté léger */
   --rer-sep: #c9cdd8;
   --rer-ink: #1b2a87;
   --rer-mission: #2635aa;
