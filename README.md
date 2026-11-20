@@ -30,7 +30,7 @@ La clé API n'est **jamais** dans le code : chaque appareil la garde pour lui (s
 | `js/network.js` | Lignes, gares et schémas des lignes de métro (fichier **généré**, ne pas modifier) |
 | `tools/build_network.py` | Régénère `js/network.js` depuis l'API |
 | `manifest.webmanifest`, `icons/` | Nom et icône quand l'app est ajoutée à l'écran d'accueil |
-| `scriptable/ProchainsTrains.js` | Widget iPhone (RER B – Châtelet - Les Halles) à copier dans l'app Scriptable |
+| `scriptable/ProchainsTrains.js` | Widget iPhone (RER B – Châtelet, gare modifiable dans le script) à copier dans l'app Scriptable |
 
 ## Publier sur GitHub Pages
 
@@ -54,7 +54,7 @@ Rendre ce dépôt public ne pose pas de problème de sécurité : la clé API n'
 3. Lance-le une fois (▶︎) : il demande ta clé PRIM et la range dans le trousseau de l'iPhone.
 4. Sur l'écran d'accueil : appui long → **+** → **Scriptable** → choisis la taille → **Ajouter**.
 5. Appui long sur le widget → **Modifier le widget** → *Script* : `Prochains trains`.
-   *Parameter* (facultatif) : `Retour` = vers Paris/CDG, `Aller` = vers Massy/Robinson.
+   *Parameter* (facultatif) : `Retour` = vers CDG/Mitry, `Aller` = vers Robinson/Saint-Rémy.
 
 iOS choisit lui-même quand rafraîchir les widgets (souvent toutes les 5 à 15 min). Les heures de départ
 restent justes ; le « dans X min » se met à jour tout seul entre deux rafraîchissements. Toucher le widget relance le script.

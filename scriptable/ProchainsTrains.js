@@ -7,8 +7,9 @@
 //
 // Paramètre du widget (appui long sur le widget → Modifier le widget → Parameter) :
 //   vide     → les deux sens (widget moyen ou grand)
-//   Retour   → seulement vers Paris / CDG (pratique pour le petit widget)
-//   Aller    → seulement vers Massy / Robinson / Saint-Rémy
+//   Retour   → seulement vers le nord : Aéroport CDG / Mitry-Claye (pratique pour le petit widget)
+//   Aller    → seulement vers le sud : Robinson / Massy / Saint-Rémy
+// Pour une autre gare : change STATION ci-dessous (identifiants : voir README.md).
 
 // ---------- Configuration ----------
 const STATION = {
@@ -20,8 +21,8 @@ const LINE = {
   name: "B",
   color: "#5291CE",
   directions: {
-    Retour: "Paris · CDG",
-    Aller: "Massy · Robinson",
+    Retour: "CDG · Mitry",
+    Aller: "Robinson · St-Rémy",
   },
 };
 const DESTINATION_ALIASES = {

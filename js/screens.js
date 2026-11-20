@@ -1,5 +1,5 @@
 // Rendu HTML des deux types d'écrans de quai : RER (liste de trains) et métro (1er / 2e métro).
-import { DESTINATION_ALIASES, AIRPORTS, SETTINGS } from "./config.js?v=20261120-1608";
+import { DESTINATION_ALIASES, AIRPORTS, SETTINGS } from "./config.js?v=20261120-1609";
 
 export const escapeHtml = (s) =>
   String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
