@@ -1,11 +1,11 @@
 // Navigation de l'app : accueil (favoris) → ligne → gare → écran de quai.
 // Les pages sont repérées par l'adresse après « # » (ex. #/board/RER_B/474151).
-import { NETWORK } from "./network.js?v=20261120-1330";
-import { DEFAULT_FAVORITES, DEFAULT_MESSAGE, SETTINGS } from "./config.js?v=20261120-1330";
-import { fetchDepartures, fetchMessages, PrimError } from "./prim.js?v=20261120-1330";
-import { rerScreen, metroScreen, lineBadge, escapeHtml, destinationHtml } from "./screens.js?v=20261120-1330";
-import { mountLinePlan } from "./lineplan.js?v=20261120-1330";
-import { openTripDialog, tripCardHtml, loadTrip, endTrip } from "./trip.js?v=20261120-1330";
+import { NETWORK } from "./network.js?v=20261120-1404";
+import { DEFAULT_FAVORITES, DEFAULT_MESSAGE, SETTINGS } from "./config.js?v=20261120-1404";
+import { fetchDepartures, fetchMessages, PrimError } from "./prim.js?v=20261120-1404";
+import { rerScreen, metroScreen, lineBadge, escapeHtml, destinationHtml } from "./screens.js?v=20261120-1404";
+import { mountLinePlan } from "./lineplan.js?v=20261120-1404";
+import { openTripDialog, tripCardHtml, loadTrip, endTrip } from "./trip.js?v=20261120-1404";
 
 const app = document.getElementById("app");
 
@@ -109,12 +109,43 @@ function favoriteCard(fav, line, station) {
       <span class="drag-handle" aria-label="Déplacer">≡</span>
     </li>`;
   }
-  return `<li class="fav-card glass" data-key="${key}">
-    <a class="fav-link" href="#/board/${key}">
-      <div class="fav-head">${lineBadge(line)}<span class="fav-name">${escapeHtml(station.name)}</span><span class="chevron">›</span></div>
-      <div class="preview" data-preview="${key}"></div>
-    </a>
+  const open = isExpanded(key);
+  // Aperçu repliable : replié = aucune requête à l'API pour cette gare
+  return `<li class="fav-card glass ${open ? "is-open" : ""}" data-key="${key}">
+    <div class="fav-head">
+      <a class="fav-link" href="#/board/${key}">${lineBadge(line)}<span class="fav-name">${escapeHtml(station.name)}</span></a>
+      <button type="button" class="fav-toggle" data-toggle="${key}" aria-expanded="${open}" aria-label="${open ? "Masquer" : "Afficher"} les prochains trains">${CHEVRON}</button>
+    </div>
+    <a class="fav-preview-link" href="#/board/${key}" ${open ? "" : "hidden"}><div class="preview" data-preview="${key}"></div></a>
   </li>`;
+}
+
+// ---------- Aperçus dépliés / repliés ----------
+const CHEVRON = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>`;
+const favKey = (f) => `${f.lineId}/${f.stationId}`;
+// Par défaut : seul le premier favori est déplié
+const expandedKeys = () => store.get("expandedPreviews", null) ?? favorites().slice(0, 1).map(favKey);
+const isExpanded = (key) => expandedKeys().includes(key);
+function setExpanded(key, open) {
+  const keys = expandedKeys().filter((k) => k !== key);
+  if (open) keys.push(key);
+  store.set("expandedPreviews", keys);
+}
+
+function toggleFavoritePreview(key) {
+  const open = !isExpanded(key);
+  setExpanded(key, open);
+  const card = document.querySelector(`.fav-card[data-key="${key}"]`);
+  if (!card) return;
+  card.classList.toggle("is-open", open);
+  const button = card.querySelector(".fav-toggle");
+  button.setAttribute("aria-expanded", String(open));
+  button.setAttribute("aria-label", `${open ? "Masquer" : "Afficher"} les prochains trains`);
+  card.querySelector(".fav-preview-link").hidden = !open;
+  if (open) {
+    drawPreviews();
+    loadPreview(key); // tout de suite, sans attendre le prochain rafraîchissement
+  }
 }
 
 function homePage() {
@@ -224,6 +255,7 @@ function drawPreviews() {
   const tripSlot = document.getElementById("trip-slot");
   if (tripSlot) updateInPlace(tripSlot, tripCardHtml(now));
   for (const el of document.querySelectorAll("[data-preview]")) {
+    if (!isExpanded(el.dataset.preview)) continue;
     const [lineId, stationId] = el.dataset.preview.split("/");
     const line = lineById(lineId);
     const station = stationOf(line, stationId);
@@ -240,22 +272,24 @@ function drawPreviews() {
   }
 }
 
+async function loadPreview(key) {
+  const [lineId, stationId] = key.split("/");
+  const line = lineById(lineId);
+  if (!stationOf(line, stationId) || !apiKey()) return;
+  try {
+    const departures = await fetchDepartures(`STIF:StopArea:SP:${stationId}:`, line.ref, apiKey());
+    previews.set(key, { departures });
+  } catch (err) {
+    if (!previews.get(key)?.departures) previews.set(key, { error: errorText(err) });
+  }
+  drawPreviews();
+}
+
+// Seuls les aperçus dépliés interrogent l'API
 async function loadPreviews() {
   if (!apiKey()) return;
   loadTrip(apiKey()).then(drawPreviews);
-  await Promise.all(
-    favorites().map(async ({ lineId, stationId }) => {
-      const line = lineById(lineId);
-      if (!stationOf(line, stationId)) return;
-      try {
-        const departures = await fetchDepartures(`STIF:StopArea:SP:${stationId}:`, line.ref, apiKey());
-        previews.set(`${lineId}/${stationId}`, { departures });
-      } catch (err) {
-        if (!previews.get(`${lineId}/${stationId}`)?.departures) previews.set(`${lineId}/${stationId}`, { error: errorText(err) });
-      }
-      drawPreviews();
-    }),
-  );
+  await Promise.all(favorites().map(favKey).filter(isExpanded).map(loadPreview));
 }
 
 function startHomePreviews() {
@@ -534,6 +568,8 @@ document.addEventListener("visibilitychange", () => {
 // ---------- Réglages ----------
 const dialog = document.getElementById("settings-dialog");
 app.addEventListener("click", (e) => {
+  const toggle = e.target.closest("[data-toggle]");
+  if (toggle) toggleFavoritePreview(toggle.dataset.toggle);
   if (e.target.closest("[data-action=end-trip]")) {
     endTrip();
     drawPreviews();

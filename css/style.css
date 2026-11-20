@@ -252,9 +252,28 @@ button { font: inherit; color: inherit; cursor: pointer; }
 /* ---------- Favoris : une carte de verre par gare, avec aperçu ---------- */
 .fav-list { display: grid; gap: 12px; margin: 0 16px; padding: 0; list-style: none; }
 .fav-card { position: relative; border-radius: 26px; overflow: hidden; background: var(--app-panel); }
-.fav-link { display: block; padding: 14px 16px 16px; }
-.fav-link:active { background: rgba(255, 255, 255, 0.06); }
-.fav-head { display: flex; align-items: center; gap: 12px; padding: 0 2px; }
+.fav-head { display: flex; align-items: center; }
+.fav-link { flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px; padding: 14px 4px 14px 18px; }
+.fav-link:active, .fav-preview-link:active { background: rgba(255, 255, 255, 0.06); }
+/* Chevron : pointe à droite replié, tourne vers le bas déplié */
+.fav-toggle {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-right: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 22px;
+  background: none;
+  color: var(--app-muted);
+}
+.fav-toggle:active { background: var(--app-press); }
+.fav-toggle svg { transition: transform 0.25s ease; }
+.fav-card.is-open .fav-toggle svg { transform: rotate(90deg); }
+.fav-preview-link { display: block; padding: 0 16px 16px; }
+.fav-preview-link .preview { margin-top: 0; }
 .fav-name { flex: 1; min-width: 0; font-size: 1.0rem; font-weight: 600; line-height: 1.25; }
 
 .fav-card.is-editing { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
@@ -823,3 +842,4 @@ body:has(.board-page) { background: #050505; }
 .trip-next-time b { color: var(--wait-ink); font-size: 0.94rem; }
 .trip-next-time small { color: var(--app-muted); font-size: 0.72rem; }
 @media (prefers-reduced-motion: reduce) { .trip-dot { animation: none; } }
+.fav-preview-link[hidden] { display: none; }
