@@ -259,12 +259,19 @@ function header(container, w, compact) {
 }
 
 // Carré noir avec l'heure en jaune (ou « Supp. » en rouge)
-function waitBox(stack, d, size = 13) {
+function waitBox(stack, d, size = 13, width = 0) {
   const box = stack.addStack();
+  if (width) {
+    box.size = new Size(width, 0); // largeur réservée : l'heure n'est jamais coupée
+    box.centerAlignContent();
+  }
   box.backgroundColor = COLORS.waitBg;
   box.cornerRadius = size > 16 ? 5 : 3;
   box.setPadding(size > 16 ? 3 : 2, size > 16 ? 7 : 5, size > 16 ? 3 : 2, size > 16 ? 7 : 5);
-  label(box, d.cancelled ? "Supp." : hhmm(d.expected), size, d.cancelled ? COLORS.red : COLORS.wait, "mono");
+  if (width) box.addSpacer();
+  const t = label(box, d.cancelled ? "Supp." : hhmm(d.expected), size, d.cancelled ? COLORS.red : COLORS.wait, "mono");
+  t.minimumScaleFactor = 0.7;
+  if (width) box.addSpacer();
 }
 
 // ---------- RER : une direction par bloc ----------
@@ -332,15 +339,16 @@ function directionColumns(container, groups, rowsPerDirection) {
 // avec l'heure en grand
 function bigRow(container, deps) {
   const d = deps.find((x) => !x.cancelled) || deps[0];
-  const row = container.addStack();
-  row.backgroundColor = COLORS.row;
-  row.setPadding(5, 8, 5, 6);
-  row.centerAlignContent();
-  const dest = label(row, d.destination, 11, COLORS.ink, "semibold");
-  dest.minimumScaleFactor = 0.6;
-  row.addSpacer(4);
+  // La destination sur sa ligne, l'heure en grand dessous : les deux restent entières
+  const block = container.addStack();
+  block.layoutVertically();
+  block.backgroundColor = COLORS.row;
+  block.setPadding(3, 8, 4, 6);
+  const dest = label(block, d.destination, 11, COLORS.ink, "semibold");
+  dest.minimumScaleFactor = 0.75;
+  const row = block.addStack();
   row.addSpacer();
-  waitBox(row, d, 20);
+  waitBox(row, d, 20, 74); // 74 pt réservés pour « 19:05 » en 20 pt
 }
 
 function directionStack(container, groups, rowsPerDirection, compact) {
