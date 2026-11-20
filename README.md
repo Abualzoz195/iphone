@@ -75,6 +75,9 @@ Le widget affiche tes gares favorites, lues dans le fichier exporté par l'app.
    *Parameter* (facultatif) : vide = 1re gare (3 premières en grand widget), `2` = 2e gare de ta liste,
    ou un bout de nom (`chatelet`).
 
+**Mises à jour** : le script se met à jour tout seul (au plus toutes les 6 h, et à chaque lancement
+depuis Scriptable) en téléchargeant la version publiée sur GitHub Pages.
+
 **Emploi du temps** : dans l'app, **Réglages → Emploi du temps du widget**. Chaque créneau = heure de
 début, heure de fin, jours, gare favorite (un créneau peut passer minuit). En dehors des créneaux, le
 widget montre ta 1re gare, ou rien du tout (aucune requête). Réexporte après chaque modification.

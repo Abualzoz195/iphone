@@ -21,6 +21,9 @@
 
 const KEYCHAIN_KEY = "prim_apikey";
 const REFRESH_MINUTES = 10;
+// Mise à jour automatique : le script se remplace par la dernière version publiée
+const SCRIPT_URL = "https://abualzoz195.github.io/iphone/scriptable/ProchainsTrains.js";
+const UPDATE_EVERY_HOURS = 6;
 // Couleurs des écrans de quai de l'app (css/style.css)
 const COLORS = {
   head: new Color("#ffffff"), // bandeau du haut
@@ -387,8 +390,41 @@ async function buildWidget(family, parameter, apiKey) {
   return widget;
 }
 
+// ---------- Mise à jour automatique ----------
+// Au plus toutes les 6 h (ou à chaque lancement depuis Scriptable), on télécharge le script
+// publié. S'il a changé, on remplace ce fichier : la nouvelle version sert dès l'affichage suivant.
+async function selfUpdate(force) {
+  const key = "prochains_trains_last_update";
+  const last = Keychain.contains(key) ? +Keychain.get(key) : 0;
+  if (!force && Date.now() - last < UPDATE_EVERY_HOURS * 3600000) return false;
+  try {
+    const req = new Request(`${SCRIPT_URL}?t=${Date.now()}`);
+    req.timeoutInterval = 10;
+    const code = await req.loadString();
+    Keychain.set(key, String(Date.now()));
+    // Garde-fou : on n'écrit que si c'est bien ce script, complet
+    if (!(req.response && req.response.statusCode === 200) || !code.includes("Widget « Prochains trains »") || code.length < 5000) return false;
+    const fm = FileManager.iCloud();
+    const path = module.filename;
+    if (fm.readString(path) === code) return false;
+    fm.writeString(path, code);
+    return true;
+  } catch {
+    return false; // pas de réseau : on réessaiera plus tard
+  }
+}
+
 // ---------- Lancement ----------
 async function main() {
+  const updated = await selfUpdate(!config.runsInWidget);
+  if (updated && !config.runsInWidget) {
+    const done = new Alert();
+    done.title = "Widget mis à jour";
+    done.message = "La nouvelle version est installée. Relance le script pour la voir.";
+    done.addAction("OK");
+    await done.presentAlert();
+    return;
+  }
   let apiKey = storedKey();
   if (!config.runsInWidget) {
     if (apiKey) {
