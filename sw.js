@@ -8,7 +8,7 @@
 // - API PRIM : jamais mise en cache (horaires toujours en direct).
 //
 // Pour forcer un nettoyage complet des caches, change le numéro de CACHE_VERSION.
-const CACHE_VERSION = 1;
+const CACHE_VERSION = 2; // 2 : app.js découpé en modules
 const APP_CACHE = `app-${CACHE_VERSION}`;
 const PLANS_CACHE = `plans-${CACHE_VERSION}`;
 const LIB_CACHE = `lib-${CACHE_VERSION}`;
@@ -21,6 +21,11 @@ const APP_FILES = [
   "manifest.webmanifest",
   "css/style.css",
   "js/app.js",
+  "js/common.js",
+  "js/settings.js",
+  "js/pages/home.js",
+  "js/pages/lines.js",
+  "js/pages/board.js",
   "js/bus.js",
   "js/buslines.js",
   "js/config.js",

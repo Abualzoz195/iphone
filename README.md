@@ -18,7 +18,16 @@ La clé API n'est **jamais** dans le code : chaque appareil la garde pour lui (s
 |---|---|
 | `index.html` | Structure de la page |
 | `css/style.css` | Styles : pages de l'app, écran RER (lavande), écran métro (bleu) |
-| `js/app.js` | Navigation (accueil, lignes, gares, écran), favoris, localisation, rafraîchissement |
+| `js/app.js` | Navigation entre les pages (routeur) |
+| `js/common.js` | Outils partagés : stockage, favoris, barre du haut, mise à jour sur place |
+| `js/pages/home.js` | Accueil : favoris, aperçus repliables, mode Modifier, carte « Mon trajet » |
+| `js/pages/lines.js` | Choix de ligne (RER, métro, bus), de gare, « Autour de moi » |
+| `js/pages/board.js` | Écran de quai et plan de ligne |
+| `js/settings.js` | Réglages, export / import, compteur de requêtes, service worker |
+| `js/trip.js` | « Je monte dans ce train » (RER) |
+| `sw.js` | Service worker : app hors connexion, mises à jour, plans gardés |
+| `fonts/` | Police Fira Sans (licence SIL OFL) |
+| `tests/` | Parcours de non-régression avec des réponses d'API enregistrées |
 | `js/screens.js` | Dessin des écrans de quai RER et métro |
 | `js/lineplan.js` | Plan de ligne sous les écrans : PDF officiel pour le RER (via PDF.js) |
 | `js/metroplan.js` | Plan de ligne métro dessiné par l'app (tronc, branches, ta station en évidence) |
@@ -83,6 +92,18 @@ La date de publication s'affiche en bas de **Réglages**.
 
 Un nouveau fichier JS doit être ajouté à `APP_FILES` dans `sw.js` pour être disponible
 hors connexion dès l'installation (sinon il est gardé à sa première utilisation).
+
+## Vérifier qu'une modification ne casse rien
+
+`tests/parcours.mjs` parcourt toute l'app (accueil, lignes, écrans RER/métro/bus, trajet,
+export/import) avec l'heure figée et les réponses d'API de `tests/donnees/`, sans toucher à la
+vraie API. Lance-le avant et après une modification : les deux fichiers doivent être identiques.
+```
+python3 -m http.server 8765 &
+node tests/parcours.mjs avant.txt      # puis, après la modification :
+node tests/parcours.mjs apres.txt && diff avant.txt apres.txt
+```
+(Il faut Node.js et Playwright : `npm i -g playwright && npx playwright install chromium`.)
 
 ## Tester sur ordinateur
 

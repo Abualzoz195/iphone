@@ -40,7 +40,6 @@ export function metroPlanSvg(line, currentId) {
 
   // 2. Passage en pixels
   const minX = Math.min(...[...points.values()].map((p) => p.x));
-  const maxX = Math.max(...[...points.values()].map((p) => p.x));
   const maxRow = Math.max(0, ...[...points.values()].map((p) => p.row));
   const top = Math.max(...trunk.map((id) => labelHeight(nameOf.get(id) ?? ""))) + 10;
   const branchIds = branches.flatMap((b) => b.ids);
