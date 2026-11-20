@@ -39,7 +39,7 @@ La clé API n'est **jamais** dans le code : chaque appareil la garde pour lui (s
 | `js/bus.js` | Bus : arrêts d'une ligne téléchargés à la demande et gardés sur le téléphone, arrêts proches |
 | `js/network.js` | Lignes, gares et schémas des lignes de métro (fichier **généré**, ne pas modifier) |
 | `tools/build_network.py` | Régénère `js/network.js` depuis l'API |
-| `manifest.webmanifest`, `icons/` | Nom et icône quand l'app est ajoutée à l'écran d'accueil |
+| `manifest.webmanifest`, `icons/` | Nom et icône quand l'app est ajoutée à l'écran d'accueil (icône dessinée dans `tools/icone.html`) |
 | `scriptable/ProchainsTrains.js` | Widget iPhone qui affiche tes favoris (fichier d'export dans iCloud Drive) |
 
 ## Publier sur GitHub Pages

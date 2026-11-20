@@ -1,0 +1,41 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  @font-face { font-family: "Fira Sans"; font-weight: 700; src: url("../fonts/fira-sans-700.woff2") format("woff2"); }
+  @font-face { font-family: "Fira Sans"; font-weight: 600; src: url("../fonts/fira-sans-600.woff2") format("woff2"); }
+  html, body { margin: 0; }
+  .icon {
+    position: relative; width: 1024px; height: 1024px; overflow: hidden;
+    background: radial-gradient(120% 90% at 30% 10%, #1b2a87 0%, #0b1033 55%, #050817 100%);
+    font-family: "Fira Sans", sans-serif;
+  }
+  /* L'écran de quai */
+  .screen {
+    position: absolute; left: 104px; right: 104px; top: 168px; bottom: 168px;
+    border-radius: 72px; overflow: hidden;
+    box-shadow: 0 40px 80px rgba(0,0,0,.45), 0 0 0 14px #1a1d2e;
+    display: flex; flex-direction: column;
+  }
+  .head { height: 176px; background: #fff; display: flex; align-items: center; gap: 34px; padding: 0 52px; }
+  .line { width: 108px; height: 108px; border-radius: 26px; background: #5091cb; display: grid; place-items: center; }
+  .line svg { width: 66px; height: 66px; }
+  .bars { flex: 1; display: grid; gap: 22px; }
+  .bars i { display: block; height: 26px; border-radius: 13px; background: #1b2a87; }
+  .bars i:last-child { width: 62%; opacity: .45; }
+  .stripe { height: 22px; background: #2a2fd8; }
+  .body { flex: 1; background: #000; display: flex; align-items: center; justify-content: center; gap: 22px; }
+  .num { color: #e7e47a; font-weight: 700; font-size: 330px; line-height: 1; letter-spacing: -6px; }
+  .unit { color: #e7e47a; font-weight: 600; font-size: 104px; align-self: flex-end; margin-bottom: 92px; }
+</style></head>
+<body>
+  <div class="icon">
+    <div class="screen">
+      <div class="head">
+        <div class="line"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg></div>
+        <div class="bars"><i></i><i></i></div>
+      </div>
+      <div class="stripe"></div>
+      <div class="body"><span class="num">2</span><span class="unit">min</span></div>
+    </div>
+  </div>
+</body></html>

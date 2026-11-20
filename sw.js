@@ -8,7 +8,7 @@
 // - API PRIM : jamais mise en cache (horaires toujours en direct).
 //
 // Pour forcer un nettoyage complet des caches, change le numéro de CACHE_VERSION.
-const CACHE_VERSION = 4; // 4 : script du widget toujours pris en direct
+const CACHE_VERSION = 5; // 5 : nouvelle icône
 const APP_CACHE = `app-${CACHE_VERSION}`;
 const PLANS_CACHE = `plans-${CACHE_VERSION}`;
 const LIB_CACHE = `lib-${CACHE_VERSION}`;
@@ -41,7 +41,9 @@ const APP_FILES = [
   "fonts/fira-sans-600.woff2",
   "fonts/fira-sans-700.woff2",
   "scriptable/ProchainsTrains.js",
+  "icons/icon-32.png",
   "icons/icon-180.png",
+  "icons/icon-192.png",
   "icons/icon-512.png",
 ];
 
