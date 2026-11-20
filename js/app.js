@@ -658,14 +658,27 @@ const favsStatus = (text) => (document.getElementById("favs-status").textContent
 document.getElementById("export-favs").addEventListener("click", async () => {
   // Pour les bus, on joint l'arrêt (nom, position) : sur un autre téléphone, un arrêt trouvé via
   // « Autour de moi » n'est pas forcément dans la liste officielle de la ligne.
+  // Le bloc « widget » sert au widget Scriptable, qui lit ce fichier dans iCloud Drive.
   const withStops = favorites().map((f) => {
     const line = lineById(f.lineId);
-    const station = line?.mode === "BUS" ? stationOf(line, f.stationId) : null;
-    return station ? { ...f, station } : f;
+    const found = stationOf(line, f.stationId);
+    const out = line?.mode === "BUS" && found ? { ...f, station: found } : { ...f };
+    if (line) {
+      out.widget = {
+        mode: line.mode,
+        code: line.code,
+        color: line.color,
+        textColor: line.textColor,
+        lineRef: line.ref,
+        stationName: found?.name ?? "",
+        monitoringRef: `STIF:StopArea:SP:${f.stationId}:`,
+      };
+    }
+    return out;
   });
   const data = {
     app: "prochains-trains",
-    format: 2,
+    format: 3,
     exportedAt: new Date().toISOString(),
     favorites: withStops,
     expandedPreviews: expandedKeys(), // aperçus dépliés

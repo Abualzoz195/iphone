@@ -30,7 +30,7 @@ La clé API n'est **jamais** dans le code : chaque appareil la garde pour lui (s
 | `js/network.js` | Lignes, gares et schémas des lignes de métro (fichier **généré**, ne pas modifier) |
 | `tools/build_network.py` | Régénère `js/network.js` depuis l'API |
 | `manifest.webmanifest`, `icons/` | Nom et icône quand l'app est ajoutée à l'écran d'accueil |
-| `scriptable/ProchainsTrains.js` | Widget iPhone (RER B – Châtelet, gare modifiable dans le script) à copier dans l'app Scriptable |
+| `scriptable/ProchainsTrains.js` | Widget iPhone qui affiche tes favoris (fichier d'export dans iCloud Drive) |
 
 ## Publier sur GitHub Pages
 
@@ -49,15 +49,19 @@ Rendre ce dépôt public ne pose pas de problème de sécurité : la clé API n'
 
 ## Widget Scriptable
 
-1. Installe **Scriptable** depuis l'App Store (gratuit).
-2. Dans Scriptable, **+** pour créer un script, colle tout le contenu de `scriptable/ProchainsTrains.js`, renomme-le `Prochains trains`.
-3. Lance-le une fois (▶︎) : il demande ta clé PRIM et la range dans le trousseau de l'iPhone.
-4. Sur l'écran d'accueil : appui long → **+** → **Scriptable** → choisis la taille → **Ajouter**.
-5. Appui long sur le widget → **Modifier le widget** → *Script* : `Prochains trains`.
-   *Parameter* (facultatif) : `Retour` = vers CDG/Mitry, `Aller` = vers Robinson/Saint-Rémy.
+Le widget affiche tes gares favorites, lues dans le fichier exporté par l'app.
 
-iOS choisit lui-même quand rafraîchir les widgets (souvent toutes les 5 à 15 min). Les heures de départ
-restent justes ; le « dans X min » se met à jour tout seul entre deux rafraîchissements. Toucher le widget relance le script.
+1. Installe **Scriptable** depuis l'App Store (gratuit).
+2. Dans Scriptable, **+**, colle tout le contenu de `scriptable/ProchainsTrains.js`, nomme le script `Prochains trains`.
+3. Lance-le une fois (▶︎) : il demande ta clé PRIM et la range dans le trousseau de l'iPhone.
+4. Dans l'app : **⚙ → Exporter → Enregistrer dans Fichiers → iCloud Drive › Scriptable**.
+   Le widget prend tout seul le fichier `mes-gares-….json` le plus récent : réexporte quand tu changes tes favoris.
+5. Sur l'écran d'accueil : appui long → **+** → **Scriptable** → taille → **Ajouter**, puis appui long sur le widget →
+   **Modifier le widget** → *Script* : `Prochains trains`.
+   *Parameter* (facultatif) : vide = 1re gare (3 premières en grand widget), `2` = 2e gare de ta liste,
+   ou un bout de nom (`chatelet`).
+
+Chaque affichage du widget fait 1 requête par gare montrée ; iOS le rafraîchit toutes les 5 à 15 min.
 
 ## Mettre à jour la liste des gares
 
