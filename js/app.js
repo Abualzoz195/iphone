@@ -3,7 +3,7 @@
 import { NETWORK } from "./network.js";
 import { DEFAULT_FAVORITES, DEFAULT_MESSAGE, SETTINGS } from "./config.js";
 import { fetchDepartures, fetchMessages, PrimError } from "./prim.js";
-import { rerScreen, metroScreen, lineBadge, escapeHtml } from "./screens.js";
+import { rerScreen, metroScreen, lineBadge, escapeHtml, destinationHtml } from "./screens.js";
 import { mountLinePlan } from "./lineplan.js";
 
 const app = document.getElementById("app");
@@ -71,11 +71,13 @@ function locate() {
   });
 }
 
-function topbar(title, { back, right = "" } = {}) {
-  return `<header class="topbar">
-    ${back ? `<a class="topbar-back" href="${back}" aria-label="Retour">‹</a>` : ""}
-    <h1 class="topbar-title">${title}</h1>
-    ${right}
+// Barre du haut façon iOS : bouton retour à gauche, titre au centre, actions à droite.
+function navbar(title, { back, backLabel = "Retour", left = "", right = "", border = true } = {}) {
+  const backHtml = back ? `<a class="nav-btn" href="${back}"><span class="nav-chevron">‹</span>${escapeHtml(backLabel)}</a>` : "";
+  return `<header class="navbar ${border ? "has-border" : ""}">
+    <div class="nav-left">${backHtml}${left}</div>
+    <h1 class="nav-title">${title}</h1>
+    <div class="nav-right">${right}</div>
   </header>`;
 }
 
@@ -83,25 +85,170 @@ const stationLink = (line, station, extra = "", showBadge = true) => `<a class="
     ${showBadge ? lineBadge(line) : ""}<span class="list-item-name">${escapeHtml(station.name)}</span>${extra}<span class="chevron">›</span></a>`;
 
 // ---------- Pages ----------
+let editing = false; // mode « Modifier » de l'accueil
+
+function favoriteCard(fav, line, station) {
+  const key = `${line.id}/${station.id}`;
+  if (editing) {
+    return `<li class="fav-card is-editing" data-key="${key}">
+      <button class="fav-delete" data-delete="${key}" aria-label="Retirer ${escapeHtml(station.name)}">−</button>
+      ${lineBadge(line)}<span class="fav-name">${escapeHtml(station.name)}</span>
+      <span class="drag-handle" aria-label="Déplacer">≡</span>
+    </li>`;
+  }
+  return `<li class="fav-card" data-key="${key}">
+    <a class="fav-link" href="#/board/${key}">
+      <div class="fav-head">${lineBadge(line)}<span class="fav-name">${escapeHtml(station.name)}</span><span class="chevron">›</span></div>
+      <div class="preview" data-preview="${key}"></div>
+    </a>
+  </li>`;
+}
+
 function homePage() {
-  const items = favorites()
+  const cards = favorites()
     .map((f) => {
       const line = lineById(f.lineId);
       const station = stationOf(line, f.stationId);
-      return line && station ? stationLink(line, station) : "";
+      return line && station ? favoriteCard(f, line, station) : "";
     })
     .join("");
 
   app.innerHTML = `<div class="page">
-    ${topbar("Mes gares", { right: `<button class="topbar-action" data-action="settings">Réglages</button>` })}
+    ${navbar("", {
+      border: false,
+      left: `<button class="nav-btn" data-action="settings">Réglages</button>`,
+      right: cards ? `<button class="nav-btn ${editing ? "is-bold" : ""}" data-action="edit">${editing ? "OK" : "Modifier"}</button>` : "",
+    })}
+    <h1 class="large-title">Mes gares</h1>
     ${!apiKey() ? `<p class="notice">Ajoute ta clé API PRIM dans <b>Réglages</b> pour voir les trains.</p>` : ""}
-    <h2 class="section-title">Favoris</h2>
-    <div class="list">${items || `<p class="empty">Aucun favori. Ajoute une gare puis touche ★ sur son écran.</p>`}</div>
-    <div class="actions">
-      <a class="button" href="#/lines">Choisir une ligne</a>
-      <a class="button secondary" href="#/nearby">📍 Gares autour de moi</a>
+    <ul class="group" id="fav-list">${cards || `<li class="empty">Aucune gare. Ajoutes-en une puis touche ☆ sur son écran.</li>`}</ul>
+    ${editing ? `<p class="group-footer">Fais glisser ≡ pour changer l'ordre.</p>` : ""}
+    <div class="group">
+      <a class="list-item is-action" href="#/lines"><span class="list-item-name">Ajouter une gare</span><span class="chevron">›</span></a>
+      <a class="list-item is-action" href="#/nearby"><span class="list-item-name">Gares autour de moi</span><span class="chevron">›</span></a>
     </div>
   </div>`;
+
+  const list = document.getElementById("fav-list");
+  if (editing) enableReorder(list);
+  else startHomePreviews();
+}
+
+// Déplacer les favoris au doigt (ou à la souris) par leur poignée ≡
+function enableReorder(list) {
+  list.addEventListener("pointerdown", (e) => {
+    const handle = e.target.closest(".drag-handle");
+    if (!handle) return;
+    e.preventDefault();
+    const item = handle.closest(".fav-card");
+    item.classList.add("dragging");
+
+    const onMove = (ev) => {
+      const others = [...list.querySelectorAll(".fav-card:not(.dragging)")];
+      const before = others.find((el) => {
+        const box = el.getBoundingClientRect();
+        return ev.clientY < box.top + box.height / 2;
+      });
+      if (before && before !== item.nextElementSibling) list.insertBefore(item, before);
+      else if (!before && list.lastElementChild !== item) list.appendChild(item);
+    };
+    const onEnd = () => {
+      item.classList.remove("dragging");
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onEnd);
+      document.removeEventListener("pointercancel", onEnd);
+      const order = [...list.querySelectorAll(".fav-card")].map((el) => {
+        const [lineId, stationId] = el.dataset.key.split("/");
+        return { lineId, stationId };
+      });
+      store.set("favorites", order);
+    };
+    document.addEventListener("pointermove", onMove);
+    document.addEventListener("pointerup", onEnd);
+    document.addEventListener("pointercancel", onEnd);
+  });
+
+  list.addEventListener("click", (e) => {
+    const key = e.target.closest("[data-delete]")?.dataset.delete;
+    if (!key) return;
+    const [lineId, stationId] = key.split("/");
+    toggleFavorite(lineId, stationId);
+    if (!favorites().length) editing = false;
+    homePage();
+  });
+}
+
+// ---------- Aperçu des prochains trains sur l'accueil ----------
+const previews = new Map(); // "ligne/gare" → { departures, error }
+
+function previewRow(line, deps, now) {
+  const next = deps.filter((d) => !d.cancelled);
+  const first = deps[0];
+  if (line.mode === "METRO") {
+    const minutes = (d) => (d ? (d.atStop ? 0 : Math.max(0, Math.floor((d.expected - now) / 60000))) : "--");
+    return `<div class="pv-row pv-metro">
+      <span class="pv-dest">${destinationHtml(next[0]?.destination ?? first.destination)}</span>
+      <span class="pv-wait">${minutes(next[0])}<span class="pv-sep"></span>${minutes(next[1])}</span>
+    </div>`;
+  }
+  const min = Math.floor((first.expected - now) / 60000);
+  let wait;
+  if (first.cancelled) wait = `<span class="pv-wait is-text is-alert">Supp.</span>`;
+  else if (first.atStop) wait = `<span class="pv-wait is-text">à quai</span>`;
+  else if (min <= 0) wait = `<span class="pv-wait is-text">à l'appr.</span>`;
+  else if (min >= 60) wait = `<span class="pv-wait is-text">${hhmmLocal(first.expected)}</span>`;
+  else wait = `<span class="pv-wait">${min}<small>min</small></span>`;
+  return `<div class="pv-row pv-rer">
+    <span class="pv-dest">${first.mission ? `<span class="pv-mission">${escapeHtml(first.mission)}</span>` : ""}${destinationHtml(first.destination)}</span>
+    ${wait}
+  </div>`;
+}
+const hhmmLocal = (d) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+
+function drawPreviews() {
+  const now = new Date();
+  for (const el of document.querySelectorAll("[data-preview]")) {
+    const [lineId, stationId] = el.dataset.preview.split("/");
+    const line = lineById(lineId);
+    const station = stationOf(line, stationId);
+    const data = previews.get(el.dataset.preview);
+    let html;
+    if (!apiKey()) html = "";
+    else if (!data) html = `<div class="pv-status">Chargement…</div>`;
+    else if (data.error) html = `<div class="pv-status">${escapeHtml(data.error)}</div>`;
+    else {
+      const groups = platformGroups(line, station, data.departures, now);
+      html = groups.length ? groups.map((g) => previewRow(line, g, now)).join("") : `<div class="pv-status">Aucun train annoncé</div>`;
+    }
+    updateInPlace(el, html);
+  }
+}
+
+async function loadPreviews() {
+  if (!apiKey()) return;
+  await Promise.all(
+    favorites().map(async ({ lineId, stationId }) => {
+      const line = lineById(lineId);
+      if (!stationOf(line, stationId)) return;
+      try {
+        const departures = await fetchDepartures(`STIF:StopArea:SP:${stationId}:`, line.ref, apiKey());
+        previews.set(`${lineId}/${stationId}`, { departures });
+      } catch (err) {
+        if (!previews.get(`${lineId}/${stationId}`)?.departures) previews.set(`${lineId}/${stationId}`, { error: errorText(err) });
+      }
+      drawPreviews();
+    }),
+  );
+}
+
+function startHomePreviews() {
+  stopBoard();
+  drawPreviews();
+  loadPreviews();
+  board.timers.push(
+    setInterval(drawPreviews, 5000), // compte à rebours
+    setInterval(loadPreviews, SETTINGS.departuresRefreshSeconds * 1000),
+  );
 }
 
 function linesPage() {
@@ -111,10 +258,10 @@ function linesPage() {
       .join("");
 
   app.innerHTML = `<div class="page">
-    ${topbar("Choisir une ligne", { back: "#/" })}
-    <h2 class="section-title">RER</h2>
+    ${navbar("Lignes", { back: "#/", backLabel: "Mes gares" })}
+    <h2 class="group-label">RER</h2>
     <div class="line-grid">${grid("RER")}</div>
-    <h2 class="section-title">Métro</h2>
+    <h2 class="group-label">Métro</h2>
     <div class="line-grid">${grid("METRO")}</div>
   </div>`;
 }
@@ -124,13 +271,12 @@ function linePage(lineId) {
   if (!line) return (location.hash = "#/lines");
 
   app.innerHTML = `<div class="page">
-    ${topbar(`${lineBadge(line)} <span>Choisir une gare</span>`, { back: "#/lines" })}
-    <div class="search-row">
+    ${navbar(lineBadge(line), { back: "#/lines", backLabel: "Lignes", right: `<button class="nav-btn" id="near">Proche</button>` })}
+    <div class="search-row" style="margin-top:12px">
       <input class="search" id="search" type="search" placeholder="Rechercher une gare" autocomplete="off">
-      <button class="button secondary small" id="near">📍 Proche</button>
     </div>
     <p class="notice" id="geo-error" hidden></p>
-    <div class="list" id="station-list"></div>
+    <div class="group" id="station-list"></div>
   </div>`;
 
   let position = null;
@@ -163,8 +309,8 @@ function linePage(lineId) {
 
 async function nearbyPage() {
   app.innerHTML = `<div class="page">
-    ${topbar("Autour de moi", { back: "#/" })}
-    <div class="list" id="near-list"><p class="empty">Localisation en cours…</p></div>
+    ${navbar("Autour de moi", { back: "#/", backLabel: "Mes gares" })}
+    <div class="group" id="near-list" style="margin-top:16px"><p class="empty">Localisation en cours…</p></div>
   </div>`;
   const list = document.getElementById("near-list");
   try {
@@ -176,7 +322,7 @@ async function nearbyPage() {
       .map(({ line, station, km }) => stationLink(line, station, `<span class="distance">${formatDistance(km)}</span>`))
       .join("");
   } catch (err) {
-    list.innerHTML = `<p class="notice">${escapeHtml(err.message)}</p>`;
+    list.innerHTML = `<p class="empty">${escapeHtml(err.message)}</p>`;
   }
 }
 
@@ -237,10 +383,9 @@ function currentMessage(now) {
 
 // Met à jour l'affichage sans remplacer les éléments existants : on ne change que les textes
 // et attributs différents. Sur iPhone, remplacer l'élément sous le doigt annule le défilement.
-let lastBoardHtml = "";
 function updateInPlace(container, html) {
-  if (html === lastBoardHtml && container.childNodes.length) return;
-  lastBoardHtml = html;
+  if (container.lastHtml === html) return;
+  container.lastHtml = html;
   const next = document.createElement("div");
   next.innerHTML = html;
   morphChildren(container, next);
@@ -264,26 +409,28 @@ function morphChildren(current, next) {
   for (let i = oldNodes.length - 1; i >= newNodes.length; i--) oldNodes[i].remove();
 }
 
+// Trains à venir regroupés par quai, comme les écrans en gare : un groupe par voie pour le RER
+// (le sens « Aller/Retour » de l'API n'est pas fiable sur le RER A), par sens pour le métro.
+// On retire les trains partis, et au terminus ceux qui finissent leur trajet ici.
+function platformGroups(line, station, departures, now) {
+  const here = compact(station.name);
+  const upcoming = departures.filter((d) => d.expected - now > -30000 && compact(d.destination) !== here);
+  const groupOf = (d) => (line.mode === "RER" && d.platform ? `voie ${d.platform}` : d.direction);
+  const keys = [...new Set(upcoming.map(groupOf))].sort((x, y) => x.localeCompare(y, "fr", { numeric: true }));
+  return keys.map((key) => upcoming.filter((d) => groupOf(d) === key));
+}
+
 function drawBoard() {
   const container = document.getElementById("screens");
   if (!container) return;
   const now = new Date();
   const { line } = board;
-  // On retire les trains partis, et au terminus ceux qui finissent leur trajet ici.
-  const here = compact(board.station.name);
-  const upcoming = board.departures.filter((d) => d.expected - now > -30000 && compact(d.destination) !== here);
-
-  // Un écran par quai, comme en gare. Le RER est regroupé par voie (le sens « Aller/Retour »
-  // de l'API n'est pas toujours fiable sur le RER A) ; le métro par sens.
-  const groupOf = (d) => (line.mode === "RER" && d.platform ? `voie ${d.platform}` : d.direction);
-  const groups = [...new Set(upcoming.map(groupOf))].sort((x, y) => x.localeCompare(y, "fr", { numeric: true }));
-  if (!groups.length) groups.push(null); // avant le premier chargement : un écran « Chargement… »
+  const groups = platformGroups(line, board.station, board.departures, now);
+  if (!groups.length) groups.push([]); // avant le premier chargement : un écran « Chargement… »
 
   const render = line.mode === "METRO" ? metroScreen : rerScreen;
   const message = currentMessage(now);
-  const html = groups
-    .map((group) => render({ line, departures: upcoming.filter((d) => group === null || groupOf(d) === group), message, now, loading: !board.loaded }))
-    .join("");
+  const html = groups.map((departures) => render({ line, departures, message, now, loading: !board.loaded })).join("");
   updateInPlace(container, html);
 
   const notice = document.getElementById("board-error");
@@ -300,9 +447,10 @@ function boardPage(lineId, stationId) {
 
   const star = () => (isFavorite(line.id, station.id) ? "★" : "☆");
   app.innerHTML = `<div class="board-page">
-    ${topbar(escapeHtml(station.name), {
+    ${navbar(escapeHtml(station.name), {
       back: "#/",
-      right: `<button class="topbar-star" id="star" aria-label="Favori">${star()}</button>`,
+      backLabel: "Mes gares",
+      right: `<button class="nav-btn nav-star" id="star" aria-label="Favori">${star()}</button>`,
     })}
     <p class="notice" id="board-error" hidden></p>
     <div class="screens" id="screens"></div>
@@ -336,6 +484,7 @@ function route() {
   stopBoard();
   document.title = "Prochains trains";
   const [, page, a, b] = location.hash.split("/");
+  if (page) editing = false; // on quitte le mode Modifier en changeant de page
   if (page === "lines") linesPage();
   else if (page === "line") linePage(a);
   else if (page === "nearby") nearbyPage();
@@ -348,14 +497,20 @@ window.addEventListener("hashchange", route);
 
 // Pas de requêtes quand l'app est en arrière-plan (batterie et quota)
 document.addEventListener("visibilitychange", () => {
-  if (!board.station || !location.hash.startsWith("#/board")) return;
+  const onBoard = board.station && location.hash.startsWith("#/board");
+  const onHome = !location.hash || location.hash === "#/" || location.hash === "#";
   if (document.hidden) stopBoard();
-  else startBoard();
+  else if (onBoard) startBoard();
+  else if (onHome && !editing) startHomePreviews();
 });
 
 // ---------- Réglages ----------
 const dialog = document.getElementById("settings-dialog");
 app.addEventListener("click", (e) => {
+  if (e.target.closest("[data-action=edit]")) {
+    editing = !editing;
+    homePage();
+  }
   if (e.target.closest("[data-action=settings]")) {
     document.getElementById("api-key").value = apiKey();
     dialog.showModal();

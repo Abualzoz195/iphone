@@ -22,7 +22,7 @@ export function lineBadge(line, size = "") {
   return `<span class="badge badge-rer ${size}" style="${style}"><span class="badge-mode">RER</span><span class="badge-line">${escapeHtml(line.code)}</span></span>`;
 }
 
-function destinationHtml(raw) {
+export function destinationHtml(raw) {
   const name = DESTINATION_ALIASES[raw] ?? raw;
   const airport = AIRPORTS.find((a) => a.match.test(raw));
   const chip = airport ? ` <span class="airport-chip"><span class="airport-plane">✈</span>${airport.code}</span>` : "";

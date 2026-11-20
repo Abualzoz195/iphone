@@ -8,12 +8,15 @@
    pour garder les proportions d'un vrai écran sur téléphone comme sur PC.
    ========================================================== */
 :root {
-  --app-bg: #0b1033;
-  --app-panel: #151b4a;
-  --app-line: #262e66;
+  /* Pages de l'app : palette sombre d'iOS */
+  --app-bg: #000000;
+  --app-panel: #1c1c1e;
+  --app-press: #2c2c2e;
+  --app-line: #38383a;
   --app-text: #ffffff;
-  --app-muted: #a9b3e0;
-  --accent: #ffd23f;
+  --app-muted: #8e8e93;
+  --accent: #0a84ff;
+  --star: #ffd60a;
 
   /* Écran RER (fond blanc, texte bleu foncé) */
   --rer-head: #ffffff;
@@ -34,7 +37,10 @@
   --wait-ink: #e7e47a;
   --alert: #ff8a3d;
 
+  /* Police des écrans de quai (proche de la Parisine des vrais écrans) */
   --font: "Fira Sans", "Helvetica Neue", Arial, sans-serif;
+  /* Police de l'app : celle du système (SF Pro sur iPhone) */
+  --ui-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   color-scheme: dark;
 }
 
@@ -45,7 +51,7 @@ html, body {
   min-height: 100%;
   background: var(--app-bg);
   color: var(--app-text);
-  font-family: var(--font);
+  font-family: var(--ui-font);
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }
@@ -59,132 +65,214 @@ button { font: inherit; color: inherit; cursor: pointer; }
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
-/* ---------- 1. Pages ---------- */
-.page { max-width: 640px; margin: 0 auto; padding-bottom: 32px; }
+/* ---------- 1. Pages : style iOS natif ---------- */
+.page { max-width: 640px; margin: 0 auto; padding-bottom: 40px; }
 
-.topbar {
+/* Barre de navigation (boutons texte, titre centré) */
+.navbar {
   position: sticky;
   top: 0;
-  z-index: 2;
-  display: flex;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 10px;
-  min-height: 56px;
-  padding: 8px 16px;
-  background: var(--app-bg);
-  border-bottom: 1px solid var(--app-line);
+  min-height: 44px;
+  padding: 0 8px;
+  background: rgba(0, 0, 0, 0.82);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
 }
-.topbar-title {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
+.navbar.has-border { border-bottom: 0.5px solid var(--app-line); }
+.nav-left { justify-self: start; display: flex; align-items: center; }
+.nav-right { justify-self: end; display: flex; align-items: center; gap: 4px; }
+.nav-title {
   margin: 0;
-  font-size: 22px;
-  font-weight: 700;
+  max-width: 60vw;
+  font-size: 17px;
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.topbar-back {
-  font-size: 34px;
-  line-height: 1;
-  padding: 0 10px 4px 0;
-  color: var(--accent);
-}
-.topbar-action {
-  padding: 6px 12px;
-  border: 1px solid var(--app-line);
-  border-radius: 8px;
-  background: none;
-  color: var(--app-muted);
-  font-size: 15px;
-}
-.topbar-star {
+.nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 8px;
   border: 0;
   background: none;
   color: var(--accent);
-  font-size: 28px;
-  line-height: 1;
-  padding: 4px;
+  font-size: 17px;
 }
+.nav-btn.is-bold { font-weight: 600; }
+.nav-chevron { font-size: 26px; line-height: 0.6; margin-top: -3px; font-weight: 300; }
+.nav-star { font-size: 24px; color: var(--star); }
 
-.section-title {
-  margin: 22px 16px 10px;
-  font-size: 14px;
-  font-weight: 600;
+.large-title { margin: 4px 16px 14px; font-size: 34px; font-weight: 700; letter-spacing: 0.2px; }
+
+.group-label {
+  margin: 22px 32px 7px;
+  font-size: 13px;
+  font-weight: 400;
   text-transform: uppercase;
-  letter-spacing: 1px;
   color: var(--app-muted);
 }
+.group-footer { margin: 7px 32px 0; color: var(--app-muted); font-size: 13px; line-height: 1.4; }
 
-.list { display: flex; flex-direction: column; }
+/* Liste groupée en carte arrondie, séparateurs décalés comme dans Réglages */
+.group {
+  margin: 0 16px;
+  padding: 0;
+  list-style: none;
+  border-radius: 12px;
+  background: var(--app-panel);
+  overflow: hidden;
+}
+.group + .group { margin-top: 20px; }
 .list-item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 56px;
+  min-height: 52px;
   padding: 8px 16px;
-  border-bottom: 1px solid var(--app-line);
 }
-.list-item:active { background: var(--app-panel); }
-.list-item-name { flex: 1; min-width: 0; font-size: 18px; font-weight: 500; }
+.list-item + .list-item::before,
+.fav-card + .fav-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 16px;
+  right: 0;
+  border-top: 0.5px solid var(--app-line);
+}
+.list-item:active { background: var(--app-press); }
+.list-item-name { flex: 1; min-width: 0; font-size: 17px; }
+.list-item.is-action { color: var(--accent); }
 .distance { color: var(--app-muted); font-size: 15px; }
-.chevron { color: var(--app-muted); font-size: 24px; }
+.chevron { color: #5a5a5f; font-size: 22px; font-weight: 300; }
 
-.empty { margin: 8px 16px; color: var(--app-muted); font-size: 16px; line-height: 1.4; }
+.empty { margin: 0; padding: 14px 16px; color: var(--app-muted); font-size: 15px; line-height: 1.4; }
 .notice {
-  margin: 12px 16px;
-  padding: 10px 12px;
-  border-left: 4px solid var(--alert);
-  background: rgba(255, 138, 61, 0.12);
+  margin: 0 16px 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--app-panel);
+  color: var(--app-text);
   font-size: 15px;
   line-height: 1.35;
 }
-
-.actions { display: grid; gap: 10px; margin: 24px 16px 0; }
-.button {
-  display: block;
-  padding: 14px;
-  border: 0;
-  border-radius: 10px;
-  background: var(--accent);
-  color: #0b1033;
-  font-size: 17px;
-  font-weight: 700;
-  text-align: center;
-}
-.button.secondary { background: var(--app-panel); color: var(--app-text); }
-.button.small { padding: 10px 12px; font-size: 15px; white-space: nowrap; }
+.notice::before { content: "⚠︎ "; color: var(--alert); }
 
 .line-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
   margin: 0 16px;
 }
 .line-tile {
   display: grid;
   place-items: center;
   padding: 12px 4px;
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--app-panel);
 }
-.line-tile:active { background: var(--app-line); }
+.line-tile:active { background: var(--app-press); }
 
-.search-row { display: flex; gap: 8px; margin: 12px 16px; }
+.search-row { display: flex; gap: 8px; margin: 4px 16px 16px; }
 .search {
   flex: 1;
   min-width: 0;
-  padding: 10px 12px;
-  border: 1px solid var(--app-line);
+  padding: 8px 12px;
+  border: 0;
   border-radius: 10px;
-  background: var(--app-panel);
+  background: #1c1c1e;
   color: var(--app-text);
   font: inherit;
-  font-size: 16px; /* 16px évite le zoom automatique de Safari */
+  font-size: 17px; /* 16 px minimum : évite le zoom automatique de Safari */
 }
+.search::placeholder { color: var(--app-muted); }
+
+/* ---------- Favoris avec aperçu des prochains trains ---------- */
+.fav-card { position: relative; }
+.fav-link { display: block; padding: 12px 16px 14px; }
+.fav-link:active { background: var(--app-press); }
+.fav-head { display: flex; align-items: center; gap: 12px; }
+.fav-name { flex: 1; min-width: 0; font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.fav-card.is-editing { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+.fav-delete {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #ff453a;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+}
+.drag-handle {
+  flex: none;
+  padding: 6px 2px 6px 12px;
+  color: #6e6e73;
+  font-size: 22px;
+  line-height: 1;
+  touch-action: none; /* le doigt déplace la gare au lieu de faire défiler */
+  cursor: grab;
+}
+.fav-card.dragging { background: #2c2c2e; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5); z-index: 2; }
+
+/* Mini écran : une ligne par direction, dans le style des écrans de quai */
+.preview {
+  margin-top: 10px;
+  border-radius: 6px;
+  overflow: hidden;
+  font-family: var(--font);
+}
+.preview:empty { display: none; }
+.pv-row { display: flex; align-items: stretch; min-height: 34px; }
+.pv-row + .pv-row { border-top: 1px solid var(--rer-sep); }
+.pv-dest {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pv-dest .dest-name { overflow: hidden; text-overflow: ellipsis; }
+.pv-mission { flex: none; padding: 1px 5px; background: var(--rer-mission); color: #fff; font-size: 11px; font-weight: 500; }
+.pv-rer { background: var(--rer-bg); color: var(--rer-ink); }
+.pv-metro { background: var(--metro-blue); color: var(--metro-ink); }
+.pv-wait {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 58px;
+  padding: 0 8px;
+  background: var(--wait-bg);
+  color: var(--wait-ink);
+  font-size: 19px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.pv-wait small { font-size: 11px; font-weight: 500; }
+.pv-wait.is-text { font-size: 12px; }
+.pv-wait.is-alert { color: var(--alert); }
+.pv-metro .pv-wait { min-width: 84px; }
+.pv-sep { width: 1px; height: 16px; margin: 0 6px; background: var(--metro-label); opacity: 0.6; }
+.pv-row .airport-chip { font-size: 10px; }
+.pv-status { padding: 8px 10px; background: var(--rer-bg); color: var(--rer-ink); font-size: 13px; }
 
 /* ---------- 2. Pastilles de ligne ---------- */
 .badge {
@@ -237,7 +325,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 /* ---------- Écran de quai : cadre commun ---------- */
 .board-page { background: #050505; }
-.board-page .topbar { background: #050505; border-bottom-color: #1c1c1c; }
+.board-page .navbar { background: rgba(5, 5, 5, 0.85); }
 
 .screens {
   display: grid;
@@ -250,6 +338,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 .screen {
   container-type: inline-size;
+  font-family: var(--font);
   overflow: hidden;
   border: 1.5cqw solid #151515;
   border-radius: 2.5cqw;
@@ -488,7 +577,7 @@ dialog input {
   border: 0;
   border-radius: 8px;
   background: var(--accent);
-  color: #0b1033;
+  color: #ffffff;
   font-weight: 700;
 }
 .dialog-actions button.secondary { background: rgba(255, 255, 255, 0.12); color: var(--app-text); }
@@ -535,7 +624,7 @@ body:has(.board-page) { background: #050505; }
   padding: 8px 16px;
   border-radius: 8px;
   background: var(--accent);
-  color: #0b1033;
+  color: #ffffff;
   font-weight: 700;
 }
 .plan-svg { display: block; }
