@@ -21,12 +21,19 @@
 
 const KEYCHAIN_KEY = "prim_apikey";
 const REFRESH_MINUTES = 10;
+// Couleurs des écrans de quai de l'app (css/style.css)
 const COLORS = {
-  bg: new Color("#08123d"),
-  text: Color.white(),
-  muted: new Color("#a9b5e3"),
-  yellow: new Color("#ffd23f"),
-  orange: new Color("#ff9f1c"),
+  head: new Color("#ffffff"), // bandeau du haut
+  row: new Color("#e2e6f3"), // lignes de trains RER (gris bleuté)
+  rowAlt: new Color("#d7dcee"),
+  ink: new Color("#1b2a87"), // texte bleu foncé
+  mission: new Color("#2635aa"),
+  waitBg: new Color("#0d0d10"), // carré noir
+  wait: new Color("#e7e47a"), // heure en jaune
+  metroBody: new Color("#000000"),
+  metroText: new Color("#e6e8ef"),
+  muted: new Color("#6c7293"),
+  late: new Color("#c2410c"),
   red: new Color("#ff4d5e"),
 };
 const ALIASES = {
@@ -175,7 +182,10 @@ async function fetchGroups(fav, apiKey) {
     // Comme l'app : par voie pour le RER, par sens pour le métro et le bus
     const key = w.mode === "RER" && platform ? `voie ${platform}` : (j.DirectionRef || {}).value || "";
     if (!groups.has(key)) groups.set(key, []);
+    // Nom de mission comme sur les écrans : « ERIC53 » si dispo, sinon le code « ROPE »
+    const name = text(j.VehicleJourneyName).replace(/^RATP/, "");
     groups.get(key).push({
+      mission: /^[A-Z]{4}\d{2}$/.test(name) ? name : text(j.JourneyNote),
       expected,
       destination: ALIASES[destination] || destination,
       delay: Math.round((expected - aimed) / 60000),
@@ -202,104 +212,135 @@ async function askForKey() {
 }
 const storedKey = () => (Keychain.contains(KEYCHAIN_KEY) ? Keychain.get(KEYCHAIN_KEY) : null);
 
-// ---------- Dessin ----------
-function badge(stack, w) {
-  const b = stack.addStack();
-  b.backgroundColor = new Color(w.color);
-  b.cornerRadius = w.mode === "METRO" ? 9 : 4;
-  b.setPadding(1, 5, 1, 5);
-  const t = b.addText((w.mode === "BUS" ? "" : w.mode === "METRO" ? "M" : "") + w.code);
-  t.font = Font.heavySystemFont(12);
-  t.textColor = new Color(w.textColor);
+// ---------- Dessin : même style que les écrans de quai de l'app ----------
+// On affiche l'heure de passage (18:37) plutôt qu'un compte à rebours : l'heure reste juste
+// entre deux rafraîchissements, et iOS écrirait le compte à rebours dans la langue du téléphone.
+
+function label(stack, value, size, color, weight = "bold") {
+  const t = stack.addText(value);
+  t.font = weight === "mono" ? Font.boldMonospacedSystemFont(size) : weight === "semibold" ? Font.semiboldSystemFont(size) : Font.boldSystemFont(size);
+  t.textColor = color;
+  t.lineLimit = 1;
+  return t;
 }
 
-function addHeader(container, w, compactHeader) {
-  const row = container.addStack();
-  row.centerAlignContent();
-  badge(row, w);
-  row.addSpacer(6);
-  const name = row.addText(w.stationName || "Gare");
-  name.font = Font.boldSystemFont(compactHeader ? 12 : 14);
-  name.textColor = COLORS.text;
-  name.lineLimit = 1;
+// Pastilles : « RER » en contour + lettre, ou « M » + numéro, ou « BUS » + numéro
+function badges(stack, w, size) {
+  const mode = stack.addStack();
+  mode.borderWidth = 1.5;
+  mode.borderColor = COLORS.ink;
+  mode.cornerRadius = w.mode === "METRO" ? size : 4;
+  mode.setPadding(1, 4, 1, 4);
+  label(mode, w.mode === "METRO" ? "M" : w.mode === "BUS" ? "BUS" : "RER", size * 0.75, COLORS.ink);
+  stack.addSpacer(3);
+  const line = stack.addStack();
+  line.backgroundColor = new Color(w.color);
+  line.cornerRadius = w.mode === "METRO" ? size : 4;
+  line.setPadding(1, 5, 1, 5);
+  label(line, w.code, size, new Color(w.textColor));
+}
+
+// Bandeau blanc : pastilles, nom de la gare, heure de mise à jour
+function header(container, w, compact) {
+  const head = container.addStack();
+  head.backgroundColor = COLORS.head;
+  head.setPadding(compact ? 6 : 7, 10, compact ? 6 : 7, 10);
+  head.centerAlignContent();
+  badges(head, w, compact ? 11 : 13);
+  head.addSpacer(7);
+  const name = label(head, w.stationName || "Gare", compact ? 12 : 14, COLORS.ink);
   name.minimumScaleFactor = 0.7;
-  row.addSpacer();
+  head.addSpacer();
+  if (!compact) label(head, hhmm(new Date()), 10, COLORS.muted, "semibold");
 }
 
-function addGroup(container, w, deps, maxRows) {
-  const col = container.addStack();
-  col.layoutVertically();
-  const first = deps.find((d) => !d.cancelled) || deps[0];
-  const dest = col.addText(`→ ${first.destination}`);
-  dest.font = Font.semiboldSystemFont(11);
-  dest.textColor = COLORS.muted;
-  dest.lineLimit = 1;
-  col.addSpacer(2);
+// Carré noir avec l'heure en jaune (ou « Supp. » en rouge)
+function waitBox(stack, d) {
+  const box = stack.addStack();
+  box.backgroundColor = COLORS.waitBg;
+  box.cornerRadius = 3;
+  box.setPadding(2, 5, 2, 5);
+  label(box, d.cancelled ? "Supp." : hhmm(d.expected), 13, d.cancelled ? COLORS.red : COLORS.wait, "mono");
+}
 
-  if (w.mode !== "RER") {
-    // Métro / bus : « 1er | 2e » en minutes, mis à jour par iOS entre deux rafraîchissements
-    const row = col.addStack();
-    row.centerAlignContent();
-    deps.filter((d) => !d.cancelled).slice(0, 2).forEach((d, i) => {
-      if (i) row.addSpacer(8);
-      const t = row.addDate(d.expected);
-      t.applyRelativeStyle();
-      t.font = Font.boldMonospacedSystemFont(14);
-      t.textColor = COLORS.yellow;
-      t.lineLimit = 1;
-    });
-    return;
-  }
+// Écran RER : une ligne par train (mission, destination, retard, heure)
+function rerRows(container, deps, maxRows, compact) {
   deps.slice(0, maxRows).forEach((d, i) => {
-    if (i) col.addSpacer(2);
-    const row = col.addStack();
+    const row = container.addStack();
+    row.backgroundColor = i % 2 ? COLORS.rowAlt : COLORS.row;
+    row.setPadding(4, compact ? 8 : 10, 4, 8);
     row.centerAlignContent();
-    const time = row.addText(d.cancelled ? "Supprimé" : hhmm(d.expected));
-    time.font = Font.boldMonospacedSystemFont(d.cancelled ? 12 : 14);
-    time.textColor = d.cancelled ? COLORS.red : COLORS.yellow;
-    if (!d.cancelled && d.delay >= 2) {
-      row.addSpacer(3);
-      const late = row.addText(`+${d.delay}`);
-      late.font = Font.boldSystemFont(11);
-      late.textColor = COLORS.orange;
+    if (!compact && d.mission) {
+      const chip = row.addStack();
+      chip.backgroundColor = COLORS.mission;
+      chip.setPadding(1, 4, 1, 4);
+      label(chip, d.mission, 9, Color.white(), "mono");
+      row.addSpacer(6);
     }
-    if (!d.cancelled) {
+    const dest = label(row, d.destination, compact ? 11 : 13, COLORS.ink, "semibold");
+    dest.minimumScaleFactor = 0.75;
+    row.addSpacer();
+    if (!compact && !d.cancelled && d.delay >= 2) { // pas la place dans le petit widget
+      label(row, `+${d.delay}′`, 10, COLORS.late);
       row.addSpacer(4);
-      const rel = row.addDate(d.expected);
-      rel.applyRelativeStyle();
-      rel.font = Font.mediumSystemFont(10);
-      rel.textColor = COLORS.muted;
-      rel.lineLimit = 1;
     }
+    waitBox(row, d);
   });
 }
 
-function addStation(widget, fav, groups, family, single) {
-  const w = fav.widget;
-  addHeader(widget, w, family === "small");
-  widget.addSpacer(5);
-  if (!groups.length) {
-    const none = widget.addText("Aucun passage annoncé");
-    none.font = Font.mediumSystemFont(12);
-    none.textColor = COLORS.muted;
-    return;
-  }
-  const shown = family === "small" ? groups.slice(0, 1) : groups.slice(0, 2);
-  const rows = family === "large" && single ? 4 : family === "large" ? 2 : 3;
-  const line = widget.addStack();
-  line.topAlignContent();
-  shown.forEach((deps, i) => {
-    if (i) line.addSpacer(10);
-    addGroup(line, w, deps, rows);
+// Écran métro / bus : une ligne par sens, « → destination » puis les deux prochains passages
+function metroRows(container, groups, maxGroups, compact) {
+  const body = container.addStack();
+  body.layoutVertically();
+  body.backgroundColor = COLORS.metroBody;
+  body.setPadding(compact ? 6 : 10, 10, 6, 10);
+  groups.slice(0, maxGroups).forEach((deps, i) => {
+    if (i) body.addSpacer(compact ? 5 : 12);
+    const next = deps.filter((d) => !d.cancelled);
+    const row = body.addStack();
+    row.centerAlignContent();
+    const dest = label(row, `→ ${next[0] ? next[0].destination : deps[0].destination}`, compact ? 11 : 14, COLORS.metroText, "semibold");
+    dest.minimumScaleFactor = 0.75;
+    row.addSpacer();
+    next.slice(0, compact ? 1 : 2).forEach((d, j) => {
+      if (j) row.addSpacer(10);
+      label(row, hhmm(d.expected), compact ? 13 : 20, COLORS.wait, "mono");
+    });
   });
+  body.addSpacer();
+}
+
+function noTrain(container, message, metro) {
+  const box = container.addStack();
+  box.backgroundColor = metro ? COLORS.metroBody : COLORS.row;
+  box.setPadding(8, 10, 8, 10);
+  label(box, message, 11, metro ? COLORS.metroText : COLORS.ink, "semibold");
+  box.addSpacer();
+}
+
+// Une gare : bandeau + trains. `rows` = nombre de trains (RER) ou de sens (métro, bus)
+function station(widget, fav, groups, rows, compact) {
+  const w = fav.widget;
+  const block = widget.addStack();
+  block.layoutVertically();
+  header(block, w, compact);
+  if (!groups.length) return noTrain(block, "Aucun passage annoncé", w.mode !== "RER");
+  if (w.mode === "RER") {
+    // Comme le panneau d'un quai : tous les sens mélangés, dans l'ordre des départs
+    const all = groups.flat().sort((a, b) => a.expected - b.expected);
+    rerRows(block, all, rows, compact);
+  } else {
+    metroRows(block, groups, Math.min(rows, 2), compact);
+  }
 }
 
 function messageWidget(message) {
   const widget = new ListWidget();
-  widget.backgroundColor = COLORS.bg;
+  widget.backgroundColor = COLORS.row;
+  widget.setPadding(12, 14, 12, 14);
   const t = widget.addText(message);
-  t.font = Font.mediumSystemFont(13);
-  t.textColor = COLORS.text;
+  t.font = Font.semiboldSystemFont(13);
+  t.textColor = COLORS.ink;
   widget.refreshAfterDate = new Date(Date.now() + REFRESH_MINUTES * 60000);
   return widget;
 }
@@ -322,26 +363,27 @@ async function buildWidget(family, parameter, apiKey) {
     idle.refreshAfterDate = boundary ? new Date(boundary.getTime() + 5000) : nextRefresh;
     return idle;
   }
+
   const widget = new ListWidget();
-  widget.backgroundColor = COLORS.bg;
-  widget.setPadding(12, 14, 12, 14);
+  const firstMode = favs[0].widget.mode;
+  widget.backgroundColor = firstMode === "RER" ? COLORS.row : COLORS.metroBody;
+  widget.setPadding(0, 0, 0, 0);
   widget.refreshAfterDate = nextRefresh;
+  const compact = family === "small";
+  // Nombre de trains par gare selon la taille du widget et le nombre de gares
+  const rows = family === "small" ? 3 : family === "medium" ? 4 : [9, 5, 3][favs.length - 1];
   for (const [i, fav] of favs.entries()) {
-    if (i) widget.addSpacer(10);
+    if (i) widget.addSpacer(6);
     try {
-      addStation(widget, fav, await fetchGroups(fav, apiKey), family, favs.length === 1);
+      station(widget, fav, await fetchGroups(fav, apiKey), rows, compact);
     } catch (err) {
-      addHeader(widget, fav.widget, family === "small");
-      const e = widget.addText(err.message || "Pas de connexion");
-      e.font = Font.mediumSystemFont(11);
-      e.textColor = COLORS.orange;
+      const block = widget.addStack();
+      block.layoutVertically();
+      header(block, fav.widget, compact);
+      noTrain(block, err.message || "Pas de connexion", fav.widget.mode !== "RER");
     }
   }
   widget.addSpacer();
-  const updated = widget.addText(`maj ${hhmm(new Date())}`);
-  updated.font = Font.mediumSystemFont(9);
-  updated.textColor = COLORS.muted;
-  updated.rightAlignText();
   return widget;
 }
 
