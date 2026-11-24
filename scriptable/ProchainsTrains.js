@@ -53,28 +53,62 @@ const hhmm = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 const compact = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
 
 // ---------- Fichier des favoris (iCloud Drive › Scriptable) ----------
+// Copie des gares gardée sur le téléphone (hors iCloud) : iOS peut retirer le fichier iCloud de
+// l'iPhone après quelques jours, et un widget n'a pas le temps d'attendre son téléchargement.
+const LOCAL_COPY = "prochains-trains-gares.json";
+
+function parseFavorites(text) {
+  const data = JSON.parse(text);
+  const list = (Array.isArray(data) ? data : data.favorites || []).filter((f) => f.widget && f.widget.lineRef);
+  const schedule = (!Array.isArray(data) && data.widgetSchedule) || { slots: [], outside: "first" };
+  return list.length ? { list, schedule } : null;
+}
+
+// Promesse limitée dans le temps (un widget est coupé par iOS s'il est trop long)
+function withTimeout(promise, seconds) {
+  let timer = null;
+  const limit = new Promise((_, reject) => {
+    timer = Timer.schedule(seconds * 1000, false, () => reject(new Error("délai dépassé")));
+  });
+  return Promise.race([promise, limit]).finally(() => timer && timer.invalidate());
+}
+
 async function readFavorites() {
-  for (const fm of [FileManager.iCloud(), FileManager.local()]) {
-    let dir;
-    try { dir = fm.documentsDirectory(); } catch { continue; }
-    const files = fm.listContents(dir).filter((n) => /^mes-gares.*\.json$/i.test(n));
-    if (!files.length) continue;
+  const local = FileManager.local();
+  const copyPath = local.joinPath(local.documentsDirectory(), LOCAL_COPY);
+  let icloud = null;
+  let downloading = false; // fichier présent dans iCloud mais pas encore sur le téléphone
+  try { icloud = FileManager.iCloud(); } catch { /* iCloud désactivé pour Scriptable */ }
+
+  if (icloud) {
+    const dir = icloud.documentsDirectory();
+    const files = icloud.listContents(dir).filter((n) => /^mes-gares.*\.json$/i.test(n));
     // Le plus récemment modifié (deux exports le même jour : « mes-gares-…-20 2.json »)
-    const paths = files.map((n) => fm.joinPath(dir, n));
-    paths.sort((a, b) => fm.modificationDate(b) - fm.modificationDate(a));
+    const paths = files.map((n) => icloud.joinPath(dir, n));
+    paths.sort((a, b) => icloud.modificationDate(b) - icloud.modificationDate(a));
     for (const path of paths) {
       try {
-        if (fm.isFileStoredIniCloud && fm.isFileStoredIniCloud(path) && !fm.isFileDownloaded(path)) {
-          await fm.downloadFileFromiCloud(path);
+        if (icloud.isFileStoredIniCloud(path) && !icloud.isFileDownloaded(path)) {
+          if (config.runsInWidget) {
+            icloud.downloadFileFromiCloud(path); // sans attendre : prêt pour la prochaine fois
+            downloading = true;
+            break; // on prend la copie locale
+          }
+          await withTimeout(icloud.downloadFileFromiCloud(path), 15);
         }
-        const data = JSON.parse(fm.readString(path));
-        const list = (Array.isArray(data) ? data : data.favorites || []).filter((f) => f.widget && f.widget.lineRef);
-        const schedule = (!Array.isArray(data) && data.widgetSchedule) || { slots: [], outside: "first" };
-        if (list.length) return { list, schedule }; // le plus récent qui contient des gares
-      } catch { /* fichier illisible : on essaie le suivant */ }
+        const text = icloud.readString(path);
+        const saved = parseFavorites(text);
+        if (saved) {
+          local.writeString(copyPath, text); // met à jour la copie locale
+          return saved;
+        }
+      } catch { /* fichier illisible ou pas encore téléchargé : on essaie le suivant */ }
     }
   }
-  return null;
+  try {
+    if (local.fileExists(copyPath)) return parseFavorites(local.readString(copyPath));
+  } catch { /* copie abîmée */ }
+  return downloading ? { downloading: true } : null;
 }
 
 // ---------- Emploi du temps ----------
@@ -157,6 +191,7 @@ async function fetchGroups(fav, apiKey) {
     "https://prim.iledefrance-mobilites.fr/marketplace/stop-monitoring" +
     `?MonitoringRef=${encodeURIComponent(w.monitoringRef)}&LineRef=${encodeURIComponent(w.lineRef)}`;
   const req = new Request(url);
+  req.timeoutInterval = 8; // secondes : au-delà, message d'erreur plutôt que widget vide
   req.headers = { apikey: apiKey, Accept: "application/json" };
   const data = await req.loadJSON();
   const status = req.response && req.response.statusCode;
@@ -495,6 +530,11 @@ function messageWidget(message) {
 
 async function buildWidget(family, parameter, apiKey) {
   const saved = await readFavorites();
+  if (saved && saved.downloading) {
+    const wait = messageWidget("Récupération de tes gares depuis iCloud… Le widget s'affichera au prochain rafraîchissement.");
+    wait.refreshAfterDate = new Date(Date.now() + 60000);
+    return wait;
+  }
   if (!saved) {
     return messageWidget("Exporte tes gares dans l'app (⚙ → Exporter) et enregistre le fichier dans iCloud Drive › Scriptable.");
   }
@@ -546,7 +586,7 @@ async function selfUpdate(force) {
   if (!force && Date.now() - last < UPDATE_EVERY_HOURS * 3600000) return false;
   try {
     const req = new Request(`${SCRIPT_URL}?t=${Date.now()}`);
-    req.timeoutInterval = 10;
+    req.timeoutInterval = force ? 10 : 4; // dans le widget, on ne s'attarde pas
     const code = await req.loadString();
     Keychain.set(key, String(Date.now()));
     // Garde-fou : on n'écrit que si c'est bien ce script, complet
@@ -595,5 +635,12 @@ async function main() {
   else await widget.presentMedium();
 }
 
-await main();
+// Si quoi que ce soit plante ou traîne, le widget affiche la raison au lieu de rester vide
+try {
+  await withTimeout(main(), 25);
+} catch (err) {
+  const widget = messageWidget(`Widget indisponible : ${err.message || err}. Ouvre le script dans Scriptable pour le relancer.`);
+  if (config.runsInWidget) Script.setWidget(widget);
+  else await widget.presentMedium();
+}
 Script.complete();
