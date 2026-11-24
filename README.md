@@ -75,6 +75,10 @@ Le widget affiche tes gares favorites, lues dans le fichier exporté par l'app.
    *Parameter* (facultatif) : vide = 1re gare (3 premières en grand widget), `2` = 2e gare de ta liste,
    ou un bout de nom (`chatelet`).
 
+**Écran d'accueil en mode « Teinté » ou « Clair »** : iOS y retire les couleurs des widgets et le texte
+disparaît. Mets `sombre` dans le paramètre du widget (seul, ou avec un numéro / nom de gare : `sombre 2`)
+pour la version sombre, sans fond derrière le texte, lisible dans tous les modes.
+
 **Mises à jour** : le script se met à jour tout seul (au plus toutes les 6 h, et à chaque lancement
 depuis Scriptable) en téléchargeant la version publiée sur GitHub Pages.
 

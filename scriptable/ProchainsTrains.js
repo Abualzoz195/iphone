@@ -39,6 +39,24 @@ const COLORS = {
   late: new Color("#c2410c"),
   red: new Color("#ff4d5e"),
 };
+// Version sombre (paramètre « sombre ») : pour l'écran d'accueil en mode « Teinté » ou « Clair ».
+// iOS y retire les couleurs et teinte tout le contenu : un fond coloré derrière un texte le
+// rendrait invisible. Cette version n'a donc aucun fond derrière le texte.
+let DARK = false;
+const DARK_COLORS = {
+  ink: new Color("#ffffff"),
+  muted: new Color("#9aa3c7"),
+  metroText: new Color("#ffffff"),
+  late: new Color("#ff9f1c"),
+  wait: new Color("#ffd23f"),
+};
+const DARK_BACKGROUND = new Color("#0b0d14");
+
+// Fond d'un bloc : jamais en version sombre
+function fill(stack, color) {
+  if (!DARK) stack.backgroundColor = color;
+}
+
 const ALIASES = {
   "Aéroport Charles de Gaulle 2 (Terminal 2)": "Aéroport CDG 2",
   "Aéroport Charles de Gaulle 1": "Aéroport CDG 1",
@@ -273,16 +291,20 @@ function badges(stack, w, size) {
   label(mode, w.mode === "METRO" ? "M" : w.mode === "BUS" ? "BUS" : "RER", size * 0.75, COLORS.ink);
   stack.addSpacer(3);
   const line = stack.addStack();
-  line.backgroundColor = new Color(w.color);
+  fill(line, new Color(w.color));
+  if (DARK) {
+    line.borderWidth = 1.5;
+    line.borderColor = new Color(w.color);
+  }
   line.cornerRadius = w.mode === "METRO" ? size : 4;
   line.setPadding(1, 5, 1, 5);
-  label(line, w.code, size, new Color(w.textColor));
+  label(line, w.code, size, DARK ? new Color(w.color) : new Color(w.textColor));
 }
 
 // Bandeau blanc : pastilles, nom de la gare, heure de mise à jour
 function header(container, w, compact) {
   const head = container.addStack();
-  head.backgroundColor = COLORS.head;
+  fill(head, COLORS.head);
   head.setPadding(compact ? 5 : 7, 10, compact ? 4 : 7, 10);
   head.centerAlignContent();
   badges(head, w, compact ? 11 : 13);
@@ -300,7 +322,7 @@ function waitBox(stack, d, size = 13, width = 0) {
     box.size = new Size(width, 0); // largeur réservée : l'heure n'est jamais coupée
     box.centerAlignContent();
   }
-  box.backgroundColor = COLORS.waitBg;
+  fill(box, COLORS.waitBg);
   box.cornerRadius = size > 16 ? 5 : 3;
   box.setPadding(size > 16 ? 3 : 2, size > 16 ? 7 : 5, size > 16 ? 3 : 2, size > 16 ? 7 : 5);
   if (width) box.addSpacer();
@@ -327,7 +349,7 @@ function twoDirections(groups) {
 
 function directionTitleRow(container, deps, compact) {
   const title = container.addStack();
-  title.backgroundColor = COLORS.head;
+  fill(title, COLORS.head);
   title.setPadding(compact ? 1 : 3, compact ? 8 : 10, compact ? 1 : 3, 6);
   const t = label(title, `→ ${directionTitle(deps)}`, compact ? 9 : 10, COLORS.muted, "semibold");
   t.minimumScaleFactor = 0.7;
@@ -339,7 +361,7 @@ function directionTitleRow(container, deps, compact) {
 function narrowRows(container, deps, maxRows, compact) {
   deps.slice(0, maxRows).forEach((d, i) => {
     const row = container.addStack();
-    row.backgroundColor = i % 2 ? COLORS.rowAlt : COLORS.row;
+    fill(row, i % 2 ? COLORS.rowAlt : COLORS.row);
     row.setPadding(compact ? 2 : 3, compact ? 8 : 10, compact ? 2 : 3, 6);
     row.centerAlignContent();
     const dest = label(row, d.destination, compact ? 11 : 12, COLORS.ink, "semibold");
@@ -358,7 +380,7 @@ function directionColumns(container, groups, rowsPerDirection) {
   groups.forEach((deps, i) => {
     if (i) {
       const line = columns.addStack(); // trait vertical entre les deux directions
-      line.backgroundColor = COLORS.rowAlt;
+      line.backgroundColor = DARK ? new Color("#2a2e40") : COLORS.rowAlt;
       line.size = new Size(1, 0);
     }
     const col = columns.addStack();
@@ -377,7 +399,7 @@ function bigRow(container, deps) {
   // La destination sur sa ligne, l'heure en grand dessous : les deux restent entières
   const block = container.addStack();
   block.layoutVertically();
-  block.backgroundColor = COLORS.row;
+  fill(block, COLORS.row);
   block.setPadding(3, 8, 4, 6);
   const dest = label(block, d.destination, 11, COLORS.ink, "semibold");
   dest.minimumScaleFactor = 0.75;
@@ -398,14 +420,14 @@ function directionStack(container, groups, rowsPerDirection, compact) {
 function rerRows(container, deps, maxRows, compact) {
   deps.slice(0, maxRows).forEach((d, i) => {
     const row = container.addStack();
-    row.backgroundColor = i % 2 ? COLORS.rowAlt : COLORS.row;
+    fill(row, i % 2 ? COLORS.rowAlt : COLORS.row);
     row.setPadding(4, compact ? 8 : 10, 4, 8);
     row.centerAlignContent();
     if (!compact && d.mission) {
       const chip = row.addStack();
-      chip.backgroundColor = COLORS.mission;
+      fill(chip, COLORS.mission);
       chip.setPadding(1, 4, 1, 4);
-      label(chip, d.mission, 9, Color.white(), "mono");
+      label(chip, d.mission, 9, DARK ? new Color("#8fb4ff") : Color.white(), "mono");
       row.addSpacer(6);
     }
     const dest = label(row, d.destination, compact ? 11 : 13, COLORS.ink, "semibold");
@@ -423,7 +445,7 @@ function rerRows(container, deps, maxRows, compact) {
 function metroRows(container, groups, maxGroups, compact) {
   const body = container.addStack();
   body.layoutVertically();
-  body.backgroundColor = COLORS.metroBody;
+  fill(body, COLORS.metroBody);
   body.setPadding(compact ? 6 : 10, 10, 6, 10);
   groups.slice(0, maxGroups).forEach((deps, i) => {
     if (i) body.addSpacer(compact ? 6 : 12);
@@ -455,7 +477,7 @@ function metroRows(container, groups, maxGroups, compact) {
 function metroColumns(container, groups) {
   const width = Math.floor((Device.screenSize().width - 52) / 2) - 1; // largeur d'un widget moyen
   const body = container.addStack();
-  body.backgroundColor = COLORS.metroBody;
+  fill(body, COLORS.metroBody);
   body.setPadding(18, 0, 12, 0); // contenu plus centré dans la hauteur du widget
   body.topAlignContent();
   groups.slice(0, 2).forEach((deps, i) => {
@@ -492,7 +514,7 @@ function metroColumns(container, groups) {
 
 function noTrain(container, message, metro) {
   const box = container.addStack();
-  box.backgroundColor = metro ? COLORS.metroBody : COLORS.row;
+  fill(box, metro ? COLORS.metroBody : COLORS.row);
   box.setPadding(8, 10, 8, 10);
   label(box, message, 11, metro ? COLORS.metroText : COLORS.ink, "semibold");
   box.addSpacer();
@@ -519,7 +541,7 @@ function station(widget, fav, groups, layout, rows, compact) {
 
 function messageWidget(message) {
   const widget = new ListWidget();
-  widget.backgroundColor = COLORS.row;
+  widget.backgroundColor = DARK ? DARK_BACKGROUND : COLORS.row;
   widget.setPadding(12, 14, 12, 14);
   const t = widget.addText(message);
   t.font = Font.semiboldSystemFont(13);
@@ -554,7 +576,7 @@ async function buildWidget(family, parameter, apiKey) {
 
   const widget = new ListWidget();
   const firstMode = favs[0].widget.mode;
-  widget.backgroundColor = firstMode === "RER" ? COLORS.row : COLORS.metroBody;
+  widget.backgroundColor = DARK ? DARK_BACKGROUND : firstMode === "RER" ? COLORS.row : COLORS.metroBody;
   widget.setPadding(0, 0, 0, 0);
   widget.refreshAfterDate = nextRefresh;
   const compact = family === "small";
@@ -628,8 +650,12 @@ async function main() {
     }
   }
   const family = config.widgetFamily || "medium";
+  const rawParameter = args.widgetParameter || "";
+  DARK = /\bsombre\b/i.test(rawParameter);
+  if (DARK) Object.assign(COLORS, DARK_COLORS);
+  const parameter = rawParameter.replace(/\bsombre\b/gi, "").trim() || null;
   const widget = apiKey
-    ? await buildWidget(family, args.widgetParameter, apiKey)
+    ? await buildWidget(family, parameter, apiKey)
     : messageWidget("Ouvre le script dans Scriptable pour entrer ta clé API PRIM.");
   if (config.runsInWidget) Script.setWidget(widget);
   else await widget.presentMedium();
