@@ -134,9 +134,14 @@ function morphChildren(current, next) {
 // Trains à venir regroupés par quai, comme les écrans en gare : un groupe par voie pour le RER
 // (le sens « Aller/Retour » de l'API n'est pas fiable sur le RER A), par sens pour le métro.
 // On retire les trains partis, et au terminus ceux qui finissent leur trajet ici.
-export function platformGroups(line, station, departures, now) {
+// keepTerminus : garder les trains qui finissent leur course ici (marqués terminusHere),
+// comme sur les écrans RER ; sinon on les retire (aperçus, métro).
+export function platformGroups(line, station, departures, now, { keepTerminus = false } = {}) {
   const here = compact(station.name);
-  const upcoming = departures.filter((d) => d.expected - now > -30000 && compact(d.destination) !== here);
+  const upcoming = departures
+    .filter((d) => d.expected - now > -30000)
+    .map((d) => (compact(d.destination) === here ? { ...d, terminusHere: true } : d))
+    .filter((d) => keepTerminus || !d.terminusHere);
   const groupOf = (d) => (line.mode === "RER" && d.platform ? `voie ${d.platform}` : d.direction);
   const keys = [...new Set(upcoming.map(groupOf))].sort((x, y) => x.localeCompare(y, "fr", { numeric: true }));
   return keys.map((key) => upcoming.filter((d) => groupOf(d) === key));

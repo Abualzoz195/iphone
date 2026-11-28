@@ -51,14 +51,21 @@ function rerWait(dep, now) {
 
 function rerRow(dep, now) {
   const notes = [];
-  if (dep.cancelled) notes.push(`<span class="row-note is-alert">Supprimé</span>`);
+  if (dep.terminusHere) notes.push(`<span class="row-note">Terminus</span>`);
+  else if (dep.cancelled) notes.push(`<span class="row-note is-alert">Supprimé</span>`);
   else if (dep.delayMinutes >= 2) notes.push(`<span class="row-note is-alert">Retard +${dep.delayMinutes}'</span>`);
   if (dep.platform) notes.push(`<span class="row-voie">Voie <b>${escapeHtml(dep.platform)}</b></span>`);
 
   // data-train : toucher la ligne ouvre « Je monte dans ce train »
-  return `<li class="rer-row ${dep.cancelled ? "is-cancelled" : ""}" data-train="${escapeHtml(dep.id)}">
+  // Desserte sous la destination : « Dessert toutes les gares », « Direct jusqu'à … »,
+  // ou « Terminus – ne prend pas de voyageurs » pour un train qui finit sa course ici
+  const stops = dep.terminusHere ? "Terminus · ne prend pas de voyageurs" : dep.servedText || "";
+  return `<li class="rer-row ${dep.cancelled ? "is-cancelled" : ""} ${dep.terminusHere ? "is-terminus" : ""} ${dep.skipsHere ? "is-skipping" : ""}" data-train="${escapeHtml(dep.id)}">
     <span class="rer-mission">${escapeHtml(dep.mission || "")}</span>
-    <span class="rer-dest">${destinationHtml(dep.destination)}</span>
+    <span class="rer-dest-cell">
+      <span class="rer-dest">${destinationHtml(dep.destination)}</span>
+      ${stops ? `<span class="rer-stops ${dep.skippedSomewhere ? "is-direct" : ""}">${escapeHtml(stops)}</span>` : ""}
+    </span>
     <span class="rer-wait">${rerWait(dep, now)}</span>
     <span class="rer-notes">${notes.join("")}</span>
   </li>`;
@@ -67,7 +74,7 @@ function rerRow(dep, now) {
 export function rerScreen({ line, departures, message, now, loading }) {
   const rows = departures.slice(0, SETTINGS.rerRows);
   // L'en-tête liste les terminus desservis depuis ce quai, comme en gare
-  const terminus = [...new Set(departures.map((d) => d.destination))].slice(0, 2);
+  const terminus = [...new Set(departures.filter((d) => !d.terminusHere).map((d) => d.destination))].slice(0, 2);
   const head = terminus.length
     ? terminus.map((t) => `<div class="head-dest-line">${destinationHtml(t)}</div>`).join("")
     : `<div class="head-dest-line">${loading ? "Chargement…" : "Aucun train annoncé"}</div>`;

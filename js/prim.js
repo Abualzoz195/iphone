@@ -97,12 +97,29 @@ export function fetchNavitia(path, params, apiKey) {
 // Liste ordonnée des arrêts d'un train RER précis (horaires prévus, en heure UTC « HHMMSS »).
 // L'identifiant temps réel (…VehicleJourney::<uuid>:LOC) et celui de Navitia partagent le même uuid.
 // Renvoie null si le train est introuvable.
-export async function fetchTrainStops(trainId, apiKey) {
+// Les arrêts d'un train ne changent pas : gardés en mémoire (1 requête par train)
+const trainStopsCache = new Map(); // uuid → promesse
+
+export function fetchTrainStops(trainId, apiKey) {
   const uuid = trainId?.match(/VehicleJourney::([0-9a-f-]{36})/i)?.[1];
-  if (!uuid) return null;
+  if (!uuid) return Promise.resolve(null);
+  if (!trainStopsCache.has(uuid)) {
+    const promise = loadTrainStops(uuid, apiKey);
+    trainStopsCache.set(uuid, promise);
+    promise.catch(() => trainStopsCache.delete(uuid)); // erreur réseau : on réessaiera
+  }
+  return trainStopsCache.get(uuid);
+}
+
+async function loadTrainStops(uuid, apiKey) {
   let data;
   try {
-    data = await primGet(`/v2/navitia/vehicle_journeys/vehicle_journey:IDFM:TN:SNCF:${uuid}`, { depth: 2 }, apiKey);
+    // Sans le tracé ni les perturbations : 125 Ko au lieu de 340 (≈ 10 Ko compressés)
+    data = await primGet(
+      `/v2/navitia/vehicle_journeys/vehicle_journey:IDFM:TN:SNCF:${uuid}`,
+      { depth: 2, disable_geojson: true, disable_disruption: true },
+      apiKey,
+    );
   } catch (err) {
     if (err instanceof PrimError && err.kind === "http") return null; // train inconnu de Navitia
     throw err;

@@ -617,6 +617,23 @@ button { font: inherit; color: inherit; cursor: pointer; }
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Destination + desserte du train sur deux lignes */
+.rer-dest-cell { display: flex; flex-direction: column; justify-content: center; gap: 0.5cqw; min-width: 0; }
+.rer-stops {
+  font-size: 2.4cqw;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.75;
+}
+.rer-stops.is-direct { opacity: 1; font-weight: 600; color: var(--rer-mission); }
+.rer-row.is-terminus .rer-dest,
+.rer-row.is-skipping .rer-dest { opacity: 0.55; }
+.rer-row.is-terminus .rer-stops,
+.rer-row.is-skipping .rer-stops { opacity: 1; font-weight: 600; color: #b23a00; }
+.rer-row.is-terminus,
+.rer-row.is-skipping { cursor: default; }
 .rer-wait {
   display: flex;
   flex-direction: column;

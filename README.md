@@ -129,6 +129,15 @@ python3 -m http.server 8000
 ```
 puis ouvre http://localhost:8000 et entre ta clé dans **Réglages**.
 
+## Desserte des trains (RER)
+
+Sous chaque train d'un écran RER, une petite ligne dit comment il roule après ta gare :
+« Dessert toutes les gares », « Direct jusqu'à Denfert-Rochereau », « Sans arrêt à Fontaine Michalon ».
+Un train qui finit sa course ici reste affiché, marqué « Terminus · ne prend pas de voyageurs »
+(on ne peut pas ouvrir « Je monte dans ce train » dessus).
+La desserte vient de la liste des arrêts du train (API Navitia) : 1 requête par train affiché,
+une seule fois, gardée en mémoire tant que l'app est ouverte.
+
 ## Quotas
 
 L'API « Prochains passages » de PRIM a un quota journalier par clé. La web app interroge l'API toutes les
