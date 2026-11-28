@@ -83,6 +83,9 @@ async function primGet(path, params, apiKey) {
   return response.json();
 }
 
+// Voie : l'API renvoie parfois « unknown » quand elle n'est pas encore attribuée
+const knownPlatform = (value) => (value && !/^unknown$/i.test(value) ? value : "");
+
 // SIRI met les textes dans des tableaux [{ value: "..." }].
 const text = (field) => (Array.isArray(field) ? field[0]?.value : field?.value) ?? "";
 
@@ -170,7 +173,7 @@ export function parseVisits(visits) {
       missionCode: text(journey.JourneyNote),
       destination: text(journey.DestinationName) || text(call.DestinationDisplay),
       direction: journey.DirectionRef?.value ?? "",
-      platform: call.DeparturePlatformName?.value ?? call.ArrivalPlatformName?.value ?? "",
+      platform: knownPlatform(call.DeparturePlatformName?.value) || knownPlatform(call.ArrivalPlatformName?.value),
       expected: expectedDate,
       aimed: aimedDate,
       // Le statut « onTime » de l'API n'est pas fiable : on calcule le retard nous-mêmes.

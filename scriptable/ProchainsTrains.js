@@ -234,7 +234,8 @@ async function fetchGroups(fav, apiKey) {
     const destination = text(j.DestinationName) || text(c.DestinationDisplay);
     if (expected - now < -30000 || (here && compact(destination) === here)) continue; // parti, ou terminus ici
     const aimed = new Date(c.AimedDepartureTime || c.AimedArrivalTime || raw);
-    const platform = (c.DeparturePlatformName || c.ArrivalPlatformName || {}).value || "";
+    let platform = (c.DeparturePlatformName || c.ArrivalPlatformName || {}).value || "";
+    if (/^unknown$/i.test(platform)) platform = ""; // voie pas encore attribuée
     // Comme l'app : par voie pour le RER, par sens pour le métro et le bus
     const key = w.mode === "RER" && platform ? `voie ${platform}` : (j.DirectionRef || {}).value || "";
     if (!groups.has(key)) groups.set(key, []);
