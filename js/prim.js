@@ -17,7 +17,11 @@ export const DAILY_QUOTA = 1000;
 const USAGE_KEY = "primUsage";
 const requestLog = []; // horodatage des requêtes de cette session (pour le débit par minute)
 
-const apiOf = (path) => (path.startsWith("/stop-monitoring") ? "passages" : path.startsWith("/general-message") ? "infotrafic" : "navitia");
+const apiOf = (path) =>
+  path.startsWith("/stop-monitoring") ? "passages"
+  : path.startsWith("/general-message") ? "infotrafic"
+  : path.startsWith("/estimated-timetable") ? "ligne" // trains de toute la ligne (quota à part)
+  : "navitia";
 const utcDay = () => new Date().toISOString().slice(0, 10);
 
 function readUsage() {
@@ -25,7 +29,7 @@ function readUsage() {
     const usage = JSON.parse(localStorage.getItem(USAGE_KEY));
     if (usage?.day === utcDay()) return usage;
   } catch { /* stockage indisponible */ }
-  return { day: utcDay(), passages: 0, infotrafic: 0, navitia: 0 };
+  return { day: utcDay(), passages: 0, infotrafic: 0, navitia: 0, ligne: 0 };
 }
 function writeUsage(usage) {
   try { localStorage.setItem(USAGE_KEY, JSON.stringify(usage)); } catch { /* */ }
@@ -128,11 +132,45 @@ async function loadTrainStops(uuid, apiKey) {
   if (!journey) return null;
   return journey.stop_times.map((st) => ({
     id: st.stop_point.stop_area.id.split(":").pop(),
+    // Identifiant de la gare dans la liste « tous les trains de la ligne » (…monomodalStopPlace:45102)
+    place: st.stop_point.id?.match(/monomodalStopPlace:(\d+)/)?.[1] ?? null,
     name: st.stop_point.stop_area.name ?? st.stop_point.name,
     arrivalUtc: st.utc_arrival_time,
     departureUtc: st.utc_departure_time,
     // Gare traversée sans arrêt (mission directe)
     skipped: Boolean(st.skipped_stop) || (!st.pickup_allowed && !st.drop_off_allowed),
+  }));
+}
+
+// Tous les trains en circulation sur une ligne, avec leurs prochains arrêts (≈ 1 h 30 d'avance).
+// Seule source où un train « sans arrêt » se voit : il passe par les gares voisines, pas par la tienne.
+// 41 Ko compressés (650 Ko de JSON) : redemandé au plus toutes les 2 min.
+const TIMETABLE_CACHE_MS = 2 * 60000;
+const timetableCache = new Map(); // ligne → { at, promise }
+
+export function fetchLineTrains(lineRef, apiKey) {
+  const hit = timetableCache.get(lineRef);
+  if (hit && Date.now() - hit.at < TIMETABLE_CACHE_MS) return hit.promise;
+  const promise = primGet("/estimated-timetable", { LineRef: lineRef }, apiKey).then(parseLineTrains);
+  timetableCache.set(lineRef, { at: Date.now(), promise });
+  promise.catch(() => timetableCache.delete(lineRef));
+  return promise;
+}
+
+export function parseLineTrains(data) {
+  const frames = data?.Siri?.ServiceDelivery?.EstimatedTimetableDelivery?.[0]?.EstimatedJourneyVersionFrame ?? [];
+  return frames.flatMap((frame) => frame.EstimatedVehicleJourney ?? []).map((journey) => ({
+    id: journey.DatedVehicleJourneyRef?.value ?? "",
+    mission: missionLabel(journey),
+    destination: text(journey.DestinationName),
+    direction: journey.DirectionRef?.value ?? "",
+    calls: (journey.EstimatedCalls?.EstimatedCall ?? [])
+      .map((call) => ({
+        place: call.StopPointRef?.value?.match(/SP:(\d+)/)?.[1],
+        time: new Date(call.ExpectedArrivalTime ?? call.ExpectedDepartureTime ?? call.AimedArrivalTime ?? call.AimedDepartureTime),
+      }))
+      .filter((call) => call.place && !isNaN(call.time))
+      .sort((a, b) => a.time - b.time), // l'API ne les donne pas dans l'ordre
   }));
 }
 

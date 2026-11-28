@@ -1,8 +1,8 @@
 // Écran de quai : un écran par voie (RER) ou par sens (métro, bus), plan de ligne,
 // « Je monte dans ce train » sur le RER.
 import { DEFAULT_MESSAGE, SETTINGS } from "../config.js";
-import { fetchDepartures, fetchMessages, fetchTrainStops } from "../prim.js";
-import { rerScreen, metroScreen, lineBadge, escapeHtml } from "../screens.js";
+import { fetchDepartures, fetchMessages, fetchTrainStops, fetchLineTrains } from "../prim.js";
+import { rerScreen, metroScreen, lineBadge, escapeHtml, hhmm } from "../screens.js";
 import { mountLinePlan } from "../lineplan.js";
 import { openTripDialog } from "../trip.js";
 import { ensureBusStops, hasBusStops } from "../bus.js";
@@ -20,7 +20,62 @@ const board = {
   loaded: false,
   error: null,
   served: new Map(), // train → desserte après cette gare (RER), calculée une fois par train
+  stopLists: [], // listes d'arrêts complètes déjà reçues : ordre des gares de la ligne autour de la tienne
+  lineTrains: [], // tous les trains de la ligne (pour repérer ceux qui passent sans s'arrêter)
 };
+
+// ---------- Trains sans arrêt (RER) ----------
+// Un train qui ne s'arrête pas ici n'apparaît pas dans les horaires de la gare. On le repère dans
+// la liste de tous les trains de la ligne : il dessert une gare avant la tienne puis une gare après,
+// sans passer par la tienne. L'ordre des gares vient des listes d'arrêts déjà téléchargées.
+export function passingTrains({ stationId, stopLists, lineTrains, departures, now }) {
+  const ours = stopLists.flat().find((s) => s.id === String(stationId))?.place;
+  if (!ours) return [];
+  const sequences = stopLists.filter((stops) => stops.some((s) => s.place === ours));
+  // Position dans le temps d'une gare, d'après l'horaire prévu du train qui sert de modèle (HHMMSS UTC)
+  const seconds = (hms) => (hms ? Number(hms.slice(0, 2)) * 3600 + Number(hms.slice(2, 4)) * 60 + Number(hms.slice(4, 6)) : NaN);
+  const known = new Set(departures.map((d) => d.id));
+  const platformOf = (direction) => departures.find((d) => d.direction === direction && d.platform)?.platform ?? "";
+  const result = [];
+  for (const train of lineTrains) {
+    if (known.has(train.id) || train.calls.some((c) => c.place === ours)) continue;
+    let time = null;
+    for (let i = 0; i + 1 < train.calls.length && !time; i++) {
+      const [a, b] = [train.calls[i], train.calls[i + 1]];
+      for (const stops of sequences) {
+        const [ia, ib, io] = [a.place, b.place, ours].map((place) => stops.findIndex((s) => s.place === place));
+        if (ia >= 0 && ia < io && io < ib) {
+          // Heure de passage estimée : au prorata de l'horaire du modèle entre les deux gares (sinon du nombre de gares)
+          const [ta, tb, to] = [ia, ib, io].map((i) => seconds(stops[i].departureUtc ?? stops[i].arrivalUtc));
+          let ratio = (to - ta) / (tb - ta);
+          if (!(ratio > 0 && ratio < 1)) ratio = (io - ia) / (ib - ia); // horaire absent ou passage minuit
+          time = new Date(a.time.getTime() + (b.time - a.time) * ratio);
+          break;
+        }
+      }
+    }
+    if (!time || time - now < -30000 || time - now > 90 * 60000) continue;
+    result.push({
+      id: train.id, mission: train.mission, destination: train.destination, direction: train.direction,
+      platform: platformOf(train.direction), expected: time, aimed: time, arrival: time,
+      delayMinutes: 0, cancelled: false, atStop: false, passing: true,
+    });
+  }
+  return result;
+}
+
+async function loadLineTrains() {
+  const { line, station } = board;
+  if (line.mode !== "RER" || !apiKey() || !board.stopLists.length) return;
+  try {
+    const trains = await fetchLineTrains(line.ref, apiKey());
+    if (board.station !== station) return;
+    board.lineTrains = trains;
+    drawBoard();
+  } catch {
+    // info secondaire : l'écran reste juste sans les trains sans arrêt
+  }
+}
 
 // ---------- Desserte des trains (RER) ----------
 // La liste des arrêts d'un train (Navitia, 1 requête par train, gardée en mémoire) dit quelles
@@ -50,7 +105,7 @@ let servedLoading = false;
 async function loadServed(trains) {
   if (servedLoading || !apiKey()) return;
   const { station } = board;
-  const missing = trains.filter((t) => !t.terminusHere && !board.served.has(t.id) && /VehicleJourney::/.test(t.id));
+  const missing = trains.filter((t) => !t.terminusHere && !t.passing && !board.served.has(t.id) && /VehicleJourney::/.test(t.id));
   if (!missing.length) return;
   servedLoading = true;
   try {
@@ -59,6 +114,7 @@ async function loadServed(trains) {
         try {
           const stops = await fetchTrainStops(train.id, apiKey());
           board.served.set(train.id, stops ? servedSummary(stops, station.id) : null);
+          if (stops && board.stopLists.length < 12) board.stopLists.push(stops);
         } catch {
           // réseau ou quota : la ligne reste sans desserte, on réessaiera au prochain chargement
         }
@@ -66,6 +122,7 @@ async function loadServed(trains) {
       if (board.station !== station) return;
       drawBoard();
     }
+    if (!board.lineTrains.length) loadLineTrains(); // l'ordre des gares est connu : on peut chercher
   } finally {
     servedLoading = false;
   }
@@ -105,6 +162,7 @@ function currentMessage(now) {
 }
 
 function withServed(dep) {
+  if (dep.passing) return { ...dep, servedText: `Ne s'arrête pas ici · passe vers ${hhmm(dep.expected)}`, skipsHere: true };
   const served = board.served.get(dep.id);
   if (!served) return dep;
   if (served.terminus) return { ...dep, terminusHere: true };
@@ -118,7 +176,9 @@ function drawBoard() {
   const { line } = board;
   const isRer = line.mode === "RER";
   // RER : on garde les trains qui terminent ici (« ne prend pas de voyageurs »), comme en gare
-  const groups = platformGroups(line, board.station, board.departures, now, { keepTerminus: isRer })
+  const passing = isRer ? passingTrains({ stationId: board.station.id, stopLists: board.stopLists, lineTrains: board.lineTrains, departures: board.departures, now }) : [];
+  const departures = passing.length ? [...board.departures, ...passing].sort((a, b) => a.expected - b.expected) : board.departures;
+  const groups = platformGroups(line, board.station, departures, now, { keepTerminus: isRer })
     .map((deps) => (isRer ? deps.map(withServed) : deps));
   if (!groups.length) groups.push([]); // avant le premier chargement : un écran « Chargement… »
   if (isRer) loadServed(groups.flatMap((deps) => deps.slice(0, SETTINGS.rerRows)));
@@ -145,7 +205,7 @@ export function boardPage(lineId, stationId) {
   const station = stationOf(line, stationId);
   if (!station) return (location.hash = "#/");
 
-  Object.assign(board, { line, station, departures: [], messages: [], loaded: false, error: null, served: new Map() });
+  Object.assign(board, { line, station, departures: [], messages: [], loaded: false, error: null, served: new Map(), stopLists: [], lineTrains: [] });
 
   const star = () => ICONS.star(isFavorite(line.id, station.id));
   app.innerHTML = `<div class="board-page">
@@ -191,6 +251,7 @@ export function startBoard() {
     setInterval(drawBoard, 5000), // horloge et compte à rebours (les « : » clignotent en CSS)
     setInterval(loadDepartures, SETTINGS.departuresRefreshSeconds * 1000),
     setInterval(loadMessages, SETTINGS.messagesRefreshSeconds * 1000),
+    setInterval(loadLineTrains, 2 * 60000), // trains sans arrêt (RER)
   );
 }
 

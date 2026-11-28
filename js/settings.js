@@ -146,7 +146,7 @@ function formatDuration(minutes) {
 function drawHud() {
   const { perMinute, remaining, minutesLeft, usage } = usageStats();
   hud.innerHTML = `<span>${perMinute} req/min</span><span>≈${remaining}/${DAILY_QUOTA} · ${formatDuration(minutesLeft)}</span>`;
-  hud.title = `Aujourd'hui (UTC) : passages ${usage.passages}, info trafic ${usage.infotrafic}, Navitia ${usage.navitia}`;
+  hud.title = `Aujourd'hui (UTC) : passages ${usage.passages}, info trafic ${usage.infotrafic}, Navitia ${usage.navitia}, ligne entière ${usage.ligne ?? 0}`;
   hud.classList.toggle("is-low", remaining < 150);
 }
 drawHud();

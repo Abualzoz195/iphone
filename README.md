@@ -138,6 +138,12 @@ Un train qui finit sa course ici reste affiché, marqué « Terminus · ne prend
 La desserte vient de la liste des arrêts du train (API Navitia) : 1 requête par train affiché,
 une seule fois, gardée en mémoire tant que l'app est ouverte.
 
+Les **trains sans arrêt** (qui traversent ta gare sans s'arrêter) n'apparaissent pas dans les horaires
+de la gare. L'app les repère dans la liste de tous les trains de la ligne (API « Prochains passages,
+requête globale », quota à part de 1 000 / jour, 1 requête toutes les 2 min quand un écran RER est
+ouvert) : un train qui dessert la gare d'avant puis celle d'après sans passer par la tienne est affiché
+« Sans arrêt », avec son heure de passage estimée.
+
 ## Quotas
 
 L'API « Prochains passages » de PRIM a un quota journalier par clé. La web app interroge l'API toutes les

@@ -41,6 +41,7 @@ function infoBar(message, line, extraClass = "") {
 
 // ---------- Écran RER ----------
 function rerWait(dep, now) {
+  if (dep.passing) return `<span class="wait-text is-passing">Sans<br>arrêt</span>`;
   if (dep.cancelled) return `<span class="wait-text is-alert">Supp.</span>`;
   if (dep.atStop) return `<span class="wait-text">à quai</span>`;
   const min = minutesUntil(dep.expected, now);

@@ -649,6 +649,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .wait-unit { font-size: 2.4cqw; font-weight: 500; }
 .wait-text { font-size: 2.8cqw; text-align: center; }
 .wait-text.is-alert { color: var(--alert); }
+.wait-text.is-passing { font-size: 2.6cqw; line-height: 1.1; }
 .rer-notes { display: flex; flex-direction: column; gap: 0.6cqw; font-size: 2.6cqw; font-weight: 500; }
 .row-note.is-alert { color: #b23a00; font-weight: 600; }
 .row-voie b { font-size: 3.6cqw; }
